@@ -24,7 +24,7 @@ export default function Header() {
         <Sparkles className="mr-2 inline h-4 w-4" />
         Premium baby care, gentle by nature and pure by care
       </div>
-      <div className="mx-auto flex max-w-7xl items-center gap-5 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:gap-5">
         <Logo />
         <Link to="/category" className="hidden items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-extrabold text-slate-700 shadow-sm transition hover:border-brand-blue hover:text-brand-blue md:flex">
           All Categories <ChevronDown className="h-4 w-4" />
@@ -41,7 +41,9 @@ export default function Header() {
             <ShoppingCart className="h-[22px] w-[22px]" />
             {cartCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-green text-[11px] text-white shadow-[0_8px_18px_rgba(8,160,75,0.24)]">{cartCount}</span>}
           </span>
-          <span className="hidden sm:block leading-tight">Cart<br />{formatPrice(totals.total)}</span>
+          <span className="hidden sm:block leading-tight">
+            Cart ({cartCount})<br />{formatPrice(totals.total)}
+          </span>
         </Link>
         <button className="grid h-10 w-10 place-items-center rounded-full border border-blue-100 bg-blue-50 text-brand-blue shadow-[0_10px_24px_rgba(7,87,168,0.10)] lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -74,6 +76,18 @@ export default function Header() {
             <div className="grid grid-cols-2 gap-2 pt-2">
               <Link onClick={() => setMenuOpen(false)} to="/login" className="rounded-md border border-slate-200 px-4 py-3 text-center text-sm font-black text-brand-blue">Account</Link>
               <Link onClick={() => setMenuOpen(false)} to="/checkout" className="rounded-md bg-brand-green px-4 py-3 text-center text-sm font-black text-white">Checkout</Link>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-blue-50 pt-3">
+              {categories.slice(0, 4).map((category) => (
+                <Link
+                  key={category.id}
+                  onClick={() => setMenuOpen(false)}
+                  to={`/category?category=${category.id}`}
+                  className="rounded-md bg-blue-50 px-4 py-3 text-sm font-black text-brand-blue"
+                >
+                  {category.title}
+                </Link>
+              ))}
             </div>
           </div>
         </nav>

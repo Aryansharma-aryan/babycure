@@ -63,6 +63,13 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8">
+        <SectionTitle title="Best Selling Babycare" action="View all products" to="/category" />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8">
         <SectionTitle title="Shop by Category" action="View all categories" to="/category" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
           {categories.map((category) => <CategoryCard key={category.id} category={category} />)}
@@ -95,12 +102,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <SectionTitle title="Best Selling Products" action="View all products" to="/category" />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
-        </div>
-      </section>
     </>
   )
 }
