@@ -1,9 +1,8 @@
-import { SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, Gift, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { categoryService, productService } from '../api/services'
-import PageHeader from '../components/PageHeader'
 import ProductCard from '../components/ProductCard'
 import { ProductGridSkeleton } from '../components/Skeleton'
 import { useDebounce } from '../hooks/useDebounce'
@@ -70,24 +69,35 @@ export default function CategoryPage() {
   }, [filters])
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
-      <PageHeader eyebrow="Shop" title="Baby Care Collection" copy="Search, filter and sort BabyCure products connected to your live backend." backTo="/" backLabel="Back to home" />
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+    <section className="bg-white pb-10">
+      <div className="overflow-hidden rounded-b-[1.2rem] bg-gradient-to-r from-brand-green via-brand-blue to-brand-green px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_50px_rgba(74,166,217,0.18)]">
+        <span className="inline-flex items-center gap-2">
+          <Gift className="h-4 w-4" /> Buy 2 baby essentials and get gentle-care gifts with selected orders
+        </span>
+      </div>
+      <div className="mx-auto max-w-[1320px] px-4 py-5">
+        <CategoryChips categories={categories} activeCategory={filters.category} updateParam={updateParam} />
+      </div>
+      <div className="mx-auto grid max-w-[1320px] gap-6 px-4 lg:grid-cols-[300px_1fr]">
         <aside className="hidden lg:block">
           <LiveFilterPanel categories={categories} filters={filters} search={search} setSearch={setSearch} updateParam={updateParam} />
         </aside>
         <div>
-          <div className="sticky top-[132px] z-20 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-blue-100 bg-white/95 p-3 shadow-[0_14px_40px_rgba(7,87,168,0.08)] backdrop-blur lg:top-32">
-            <div>
-              <p className="text-sm font-black text-slate-950">{meta.total} Products</p>
-              <p className="text-xs font-bold text-slate-500">Fresh baby-care essentials</p>
+          <div className="sticky top-[116px] z-20 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 bg-white/95 py-4 backdrop-blur lg:top-[142px]">
+            <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+              <p className="text-base font-extrabold text-brand-ink">
+                Showing <span className="text-brand-blue">{meta.total}</span> Products
+              </p>
+              <label className="flex items-center gap-3 text-base font-extrabold text-brand-ink">
+                Sort By:
+                <select className="rounded-full border-0 bg-transparent py-2 pr-7 text-base font-extrabold text-brand-ink outline-none" value={filters.sort} onChange={(event) => updateParam('sort', event.target.value)}>
+                  {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
             </div>
-            <button type="button" onClick={() => setFiltersOpen(true)} className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-4 py-3 text-sm font-black text-brand-blue shadow-[0_10px_24px_rgba(7,87,168,0.08)] lg:hidden">
+            <button type="button" onClick={() => setFiltersOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-brand-mist px-4 py-3 text-sm font-black text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.12)] lg:hidden">
               <SlidersHorizontal className="h-4 w-4" /> Filters
             </button>
-            <select className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm" value={filters.sort} onChange={(event) => updateParam('sort', event.target.value)}>
-              {sortOptions.map(([value, label]) => <option key={value} value={value}>Sort by: {label}</option>)}
-            </select>
           </div>
           {loading ? (
             <ProductGridSkeleton />
@@ -97,13 +107,13 @@ export default function CategoryPage() {
               <p className="mt-2 font-semibold text-slate-500">Try a different category, price range, or search term.</p>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-x-10 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
               {products.map((product) => <ProductCard key={product._id} product={product} />)}
             </div>
           )}
           <div className="mt-8 flex items-center justify-center gap-2">
             {Array.from({ length: meta.pages }, (_, index) => index + 1).slice(0, 6).map((page) => (
-              <button key={page} type="button" onClick={() => updateParam('page', String(page))} className={`h-10 min-w-10 rounded-md px-3 text-sm font-black ${meta.page === page ? 'bg-brand-blue text-white' : 'border border-blue-100 bg-white text-brand-blue'}`}>
+              <button key={page} type="button" onClick={() => updateParam('page', String(page))} className={`h-10 min-w-10 rounded-full px-3 text-sm font-black ${meta.page === page ? 'bg-brand-blue text-white' : 'border border-blue-100 bg-white text-brand-blue'}`}>
                 {page}
               </button>
             ))}
@@ -122,30 +132,79 @@ export default function CategoryPage() {
   )
 }
 
+function CategoryChips({ categories, activeCategory, updateParam }) {
+  const visibleCategories = categories.slice(0, 8)
+
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-2">
+      <button
+        type="button"
+        onClick={() => updateParam('category', '')}
+        className={`shrink-0 rounded-full px-9 py-3 text-lg font-extrabold transition ${!activeCategory ? 'bg-brand-green text-white shadow-[0_16px_38px_rgba(124,197,118,0.24)]' : 'border border-brand-ink/30 bg-white text-brand-ink hover:border-brand-blue hover:text-brand-blue'}`}
+      >
+        All ›
+      </button>
+      {visibleCategories.map((category) => (
+        <button
+          key={category._id}
+          type="button"
+          onClick={() => updateParam('category', category._id)}
+          className={`shrink-0 rounded-full px-9 py-3 text-lg font-extrabold transition ${activeCategory === category._id ? 'bg-brand-blue text-white shadow-[0_16px_38px_rgba(74,166,217,0.24)]' : 'border border-brand-ink/30 bg-white text-brand-ink hover:border-brand-blue hover:text-brand-blue'}`}
+        >
+          {category.name} ›
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function LiveFilterPanel({ categories, filters, search, setSearch, updateParam }) {
   return (
-    <div className="sticky top-32 rounded-md border border-blue-100 bg-white p-5 shadow-[0_18px_55px_rgba(7,87,168,0.08)]">
-      <h3 className="font-display text-xl font-black text-slate-950">Filters</h3>
-      <label className="mt-5 block text-sm font-black text-slate-700">Search</label>
-      <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Baby wash, lotion..." className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
-      <label className="mt-5 block text-sm font-black text-slate-700">Category</label>
-      <select value={filters.category} onChange={(event) => updateParam('category', event.target.value)} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue">
+    <div className="sticky top-[142px] bg-white">
+      <div className="mb-5 flex items-center gap-3 text-base font-extrabold text-brand-ink">
+        <span>Sort By:</span>
+        <select className="flex-1 rounded-full border-0 bg-white py-2 text-base font-extrabold outline-none" value={filters.sort} onChange={(event) => updateParam('sort', event.target.value)}>
+          {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </div>
+      <h3 className="border-b border-slate-200 pb-3 font-display text-2xl font-extrabold text-brand-ink">Filters</h3>
+      <FilterBlock title="Search">
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Baby wash, lotion..." className="w-full rounded-full border border-sky-100 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
+      </FilterBlock>
+      <FilterBlock title="Category">
+        <select value={filters.category} onChange={(event) => updateParam('category', event.target.value)} className="w-full rounded-full border border-sky-100 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue">
         <option value="">All Categories</option>
         {categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
       </select>
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      </FilterBlock>
+      <FilterBlock title="Price">
+        <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-black text-slate-700">Min</label>
-          <input value={filters.minPrice} onChange={(event) => updateParam('minPrice', event.target.value)} inputMode="numeric" className="mt-2 w-full rounded-md border border-slate-200 px-3 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
+          <input value={filters.minPrice} onChange={(event) => updateParam('minPrice', event.target.value)} inputMode="numeric" placeholder="Min" className="w-full rounded-full border border-sky-100 px-3 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
         </div>
         <div>
-          <label className="block text-sm font-black text-slate-700">Max</label>
-          <input value={filters.maxPrice} onChange={(event) => updateParam('maxPrice', event.target.value)} inputMode="numeric" className="mt-2 w-full rounded-md border border-slate-200 px-3 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
+          <input value={filters.maxPrice} onChange={(event) => updateParam('maxPrice', event.target.value)} inputMode="numeric" placeholder="Max" className="w-full rounded-full border border-sky-100 px-3 py-3 text-sm font-bold outline-none focus:border-brand-blue" />
         </div>
       </div>
-      <button type="button" onClick={() => { setSearch(''); updateParam('category', ''); updateParam('minPrice', ''); updateParam('maxPrice', '') }} className="mt-5 w-full rounded-md bg-green-50 px-4 py-3 text-sm font-black text-brand-green">
+      </FilterBlock>
+      <FilterBlock title="Baby Concern">
+        <p className="text-sm font-semibold text-slate-500">Dry skin, rash care, bath time, newborn safety</p>
+      </FilterBlock>
+      <button type="button" onClick={() => { setSearch(''); updateParam('category', ''); updateParam('minPrice', ''); updateParam('maxPrice', '') }} className="mt-5 w-full rounded-full bg-brand-leaf px-4 py-3 text-sm font-black text-brand-green transition hover:bg-green-100">
         Clear filters
       </button>
+    </div>
+  )
+}
+
+function FilterBlock({ title, children }) {
+  return (
+    <div className="border-b border-slate-200 py-5">
+      <div className="mb-3 flex items-center justify-between text-lg font-extrabold text-brand-ink">
+        <span>{title}</span>
+        <ChevronDown className="h-4 w-4" />
+      </div>
+      {children}
     </div>
   )
 }

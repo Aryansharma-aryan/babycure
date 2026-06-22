@@ -6,7 +6,7 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import Logo from '../components/Logo'
 import PageHeader from '../components/PageHeader'
-import { images } from '../data/products'
+import authImage from '../assets/babycure-hero-products.png'
 import { useAuth } from '../hooks/useAuth'
 
 const phonePattern = /^[6-9]\d{9}$/
@@ -118,21 +118,33 @@ export default function LoginPage() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-8">
       <PageHeader eyebrow="Account" title="Login / Register" copy="Manage orders, addresses and saved care lists." backTo="/" backLabel="Back to store" />
-      <div className="grid overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="relative min-h-[520px]">
-          <img src={images.nursery} alt="Soft nursery interior" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/80 to-brand-blue/10" />
-          <div className="absolute bottom-8 left-8 right-8 text-white">
-            <h2 className="font-display text-4xl font-black">Welcome to Babycure</h2>
-            <p className="mt-3 max-w-md font-semibold text-blue-50">Track orders and keep your baby's care essentials ready.</p>
+      <div className="grid overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_30px_100px_rgba(74,166,217,0.14)] lg:grid-cols-[0.98fr_1.02fr]">
+        <div className="relative min-h-[560px] overflow-hidden bg-[linear-gradient(135deg,#F5FFF3,#F3FBFF)]">
+          <img src={authImage} alt="BabyCure shampoo and skincare products with mother and baby" className="absolute inset-0 h-full w-full object-cover object-[59%_center]" loading="lazy" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(23,50,77,0.34)),linear-gradient(90deg,rgba(255,255,255,0.72),rgba(255,255,255,0.08)_55%,rgba(255,255,255,0))]" />
+          <div className="absolute left-6 top-6 rounded-full border border-white/70 bg-white/84 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-brand-green shadow-[0_18px_55px_rgba(124,197,118,0.18)] backdrop-blur">
+            Gentle by nature
+          </div>
+          <div className="absolute bottom-8 left-6 right-6 rounded-[1.7rem] border border-white/65 bg-white/82 p-6 shadow-[0_24px_70px_rgba(74,166,217,0.18)] backdrop-blur">
+            <h2 className="font-display text-4xl font-black leading-tight text-brand-ink">Welcome to BabyCure</h2>
+            <p className="mt-3 max-w-md font-semibold leading-7 text-slate-600">Sign in for faster checkout, order tracking, wishlist care and fresh baby-care offers.</p>
+            <div className="mt-5 grid grid-cols-3 gap-3 text-center text-xs font-black text-brand-ink">
+              {['Shampoo', 'Skincare', 'Baby Wipes'].map((item) => (
+                <span key={item} className="rounded-full bg-gradient-to-r from-brand-leaf to-sky-50 px-3 py-2 text-brand-blue">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="p-8 md:p-12">
-          <Logo />
+        <div className="bg-[linear-gradient(135deg,#FFFFFF,#F7FCFF_54%,#F6FFF4)] p-7 md:p-12">
+          <div className="inline-flex rounded-3xl bg-white p-2 shadow-[0_18px_50px_rgba(74,166,217,0.10)]">
+            <Logo />
+          </div>
 
           {isAuthenticated ? (
-            <div className="mt-8 rounded-md border border-green-100 bg-gradient-to-br from-green-50 via-white to-blue-50 p-6">
+            <div className="mt-8 rounded-[1.5rem] border border-green-100 bg-gradient-to-br from-green-50 via-white to-blue-50 p-6 shadow-[0_20px_65px_rgba(124,197,118,0.12)]">
               <span className="grid h-14 w-14 place-items-center rounded-full bg-green-100 text-brand-green">
                 <ShieldCheck className="h-7 w-7" />
               </span>
@@ -152,7 +164,7 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              <div className="mt-8 grid grid-cols-2 gap-2 rounded-md bg-slate-100 p-1">
+              <div className="mt-8 grid grid-cols-2 gap-2 rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12),0_16px_38px_rgba(74,166,217,0.08)]">
                 {[
                   ['email', Mail, 'Email'],
                   ['phone', Phone, 'Phone OTP'],
@@ -160,7 +172,7 @@ export default function LoginPage() {
                   <button
                     key={item}
                     type="button"
-                    className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-black ${authType === item ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`}
+                    className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-black transition hover:text-brand-blue ${authType === item ? 'bg-gradient-to-r from-brand-blue to-brand-green text-white shadow-[0_14px_35px_rgba(74,166,217,0.20)]' : 'text-slate-500'}`}
                     onClick={() => setAuthType(item)}
                   >
                     <Icon className="h-4 w-4" /> {label}
@@ -172,9 +184,9 @@ export default function LoginPage() {
 
               {authType === 'email' ? (
                 <form className="mt-7" onSubmit={handleEmailSubmit}>
-                  <div className="mb-5 inline-flex rounded-md bg-slate-100 p-1">
+                  <div className="mb-5 inline-flex rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12)]">
                     {['login', 'register'].map((item) => (
-                      <button key={item} type="button" className={`rounded-md px-5 py-2 text-sm font-black capitalize ${mode === item ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`} onClick={() => setMode(item)}>
+                      <button key={item} type="button" className={`rounded-full px-5 py-2 text-sm font-black capitalize transition hover:text-brand-blue ${mode === item ? 'bg-brand-leaf text-brand-green shadow-sm' : 'text-slate-500'}`} onClick={() => setMode(item)}>
                         {item}
                       </button>
                     ))}

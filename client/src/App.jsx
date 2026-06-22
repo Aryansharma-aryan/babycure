@@ -18,6 +18,7 @@ const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'))
 const OrderDetailsPage = lazy(() => import('./pages/OrderDetailsPage'))
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const WishlistPage = lazy(() => import('./pages/WishlistPage'))
 
 const router = createBrowserRouter([
   {
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
       { path: 'orders/:id', element: <OrderDetailsPage /> },
       { path: 'orders/:id/tracking', element: <OrderTrackingPage /> },
       { path: 'admin', element: <AdminPage /> },
+      { path: 'wishlist', element: <WishlistPage /> },
       { path: '*', element: <CategoryPage /> },
     ],
   },

@@ -96,6 +96,25 @@ img {
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 255, 0.98)) !important;
 }
 
+.baby-offer-track {
+  animation: baby-offer-marquee 34s linear infinite;
+  padding-inline: 1rem;
+}
+
+.baby-offer-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes baby-offer-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .brand-logo-light {
   filter: drop-shadow(0 12px 28px rgba(255, 255, 255, 0.16));
 }
@@ -119,6 +138,12 @@ img {
 @media (max-width: 1023px) {
   body {
     padding-bottom: 76px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .baby-offer-track {
+    animation-duration: 70s;
   }
 }
 

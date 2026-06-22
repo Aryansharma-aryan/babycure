@@ -8,14 +8,13 @@ import {
   MessageCircleHeart,
   PackageCheck,
   ShieldCheck,
-  ShoppingBag,
   Sparkles,
   Star,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from '../components/Button'
 import { images } from '../data/products'
-import heroImage from '../assets/heroo.png'
+import heroImage from '../assets/babycure-hero-products.png'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -86,10 +85,19 @@ const testimonials = [
   { name: 'Ritika P.', text: 'BabyCure feels trustworthy. The wipes and wash became our daily essentials.', rating: 5 },
 ]
 
+const marqueeItems = [
+  'Today only: Flat 20% off on BabyCure essentials',
+  'Dermatologist-tested shampoo, lotion and skincare',
+  'Free shipping on orders above Rs.499',
+  'Natural care for bath, massage and diaper routines',
+  'Fresh baby wipes and soothing cream for daily comfort',
+]
+
 export default function HomePage() {
   return (
-    <main className="overflow-hidden bg-white text-brand-ink">
+    <main className="overflow-hidden bg-[linear-gradient(180deg,#FFFFFF_0%,#F5FFF3_42%,#F3FBFF_100%)] text-brand-ink">
       <HeroSection />
+      <OfferMarquee />
       <CategorySection />
       <FeaturedSection />
       <ParentsLoveSection />
@@ -103,26 +111,26 @@ export default function HomePage() {
 
 function HeroSection() {
   return (
-    <section className="relative isolate min-h-[780px] overflow-hidden bg-white">
+    <section className="relative isolate min-h-[calc(100svh-104px)] overflow-hidden bg-[linear-gradient(135deg,#FFFFFF_0%,#F6FFF4_43%,#EFF9FF_100%)] sm:min-h-[760px] lg:min-h-[calc(100vh-132px)] xl:min-h-[820px]">
       <img
         src={heroImage}
         alt="Mother holding smiling baby with BabyCure products"
-        className="absolute inset-0 h-full w-full object-cover object-[64%_center]"
+        className="absolute inset-0 h-full w-full object-cover object-[58%_center] sm:object-[62%_center]"
         loading="eager"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,#FFFFFF_0%,rgba(255,255,255,0.96)_31%,rgba(255,255,255,0.78)_47%,rgba(255,255,255,0.20)_72%,rgba(255,255,255,0)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_20%,rgba(124,197,118,0.22),transparent_24rem),radial-gradient(circle_at_78%_20%,rgba(74,166,217,0.16),transparent_30rem)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,#FFFFFF_0%,rgba(248,255,246,0.98)_30%,rgba(240,252,255,0.82)_47%,rgba(255,255,255,0.28)_72%,rgba(255,255,255,0.02)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_6%_24%,rgba(124,197,118,0.34),transparent_26rem),radial-gradient(circle_at_34%_18%,rgba(74,166,217,0.14),transparent_28rem),radial-gradient(circle_at_78%_18%,rgba(124,197,118,0.16),transparent_31rem)]" />
       <motion.div
         initial="hidden"
         animate="visible"
         variants={stagger}
-        className="relative mx-auto grid min-h-[780px] max-w-7xl items-center px-4 py-14 lg:grid-cols-[0.82fr_1.18fr] lg:px-6"
+        className="relative mx-auto grid min-h-[calc(100svh-104px)] max-w-7xl items-center px-4 py-10 sm:min-h-[760px] lg:min-h-[calc(100vh-132px)] lg:grid-cols-[0.82fr_1.18fr] lg:px-6 xl:min-h-[820px]"
       >
-        <motion.div variants={fadeUp} transition={{ duration: 0.65, ease: 'easeOut' }} className="max-w-2xl pt-6">
+        <motion.div variants={fadeUp} transition={{ duration: 0.65, ease: 'easeOut' }} className="max-w-2xl pt-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-white/88 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.22em] text-brand-green shadow-[0_18px_50px_rgba(124,197,118,0.16)] backdrop-blur">
             <Sparkles className="h-4 w-4" /> Premium baby care
           </span>
-          <h1 className="mt-8 font-display text-[56px] font-extrabold leading-[0.95] tracking-[-0.02em] text-brand-ink sm:text-[78px] lg:text-[96px]">
+          <h1 className="mt-8 font-display text-[54px] font-extrabold leading-[0.95] tracking-[-0.02em] text-brand-ink sm:text-[78px] lg:text-[94px]">
             Pure Love. <span className="text-brand-blue">Gentle</span> <span className="text-brand-green">Care.</span>
           </h1>
           <p className="mt-7 max-w-xl text-lg font-medium leading-8 text-slate-600 sm:text-xl">
@@ -150,29 +158,35 @@ function HeroSection() {
             ))}
           </div>
         </motion.div>
-
-        <motion.div variants={fadeUp} transition={{ duration: 0.75, ease: 'easeOut' }} className="relative hidden min-h-[610px] lg:block">
-          <div className="absolute right-4 top-20 rounded-full border border-white/80 bg-white/78 px-6 py-5 text-center shadow-[0_24px_70px_rgba(74,166,217,0.16)] backdrop-blur-md">
-            <p className="text-sm font-bold text-slate-500">Loved by</p>
-            <p className="font-display text-4xl font-extrabold text-brand-ink">10,000+</p>
-            <p className="text-sm font-bold text-slate-500">Happy Parents</p>
-          </div>
-          <div className="absolute bottom-9 left-16 right-0 grid grid-cols-3 gap-3 rounded-[2rem] border border-white bg-white/88 p-4 shadow-[0_28px_80px_rgba(124,197,118,0.20)] backdrop-blur">
-            {[
-              [ShieldCheck, 'Dermatologist Tested'],
-              [Droplets, 'Tear-Free Formula'],
-              [Baby, 'Safe for Newborns'],
-            ].map(([Icon, label]) => (
-              <div key={label} className="text-center">
-                <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-brand-leaf text-brand-green">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <p className="mt-2 text-[11px] font-extrabold leading-4 text-brand-ink">{label}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </motion.div>
+    </section>
+  )
+}
+
+function OfferMarquee() {
+  const loopItems = [...marqueeItems, ...marqueeItems]
+
+  return (
+    <section className="relative z-10 border-y border-sky-100 bg-white/90 py-2 shadow-[0_12px_34px_rgba(74,166,217,0.10)] backdrop-blur">
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent" />
+      <div className="overflow-hidden">
+        <div className="baby-offer-track flex w-max items-center gap-7">
+          {loopItems.map((item, index) => (
+            <Link
+              key={`${item}-${index}`}
+              to="/category"
+              className="inline-flex items-center gap-3 text-sm font-extrabold text-brand-ink transition hover:text-brand-green"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand-leaf to-sky-50 text-brand-green">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+              <span>{item}</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-blue/35" />
+            </Link>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }

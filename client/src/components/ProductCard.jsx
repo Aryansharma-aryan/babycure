@@ -52,28 +52,31 @@ function ProductCard({ product }) {
   }
 
   return (
-    <article className="group rounded-md border border-blue-100 bg-white p-4 shadow-[0_18px_55px_rgba(7,87,168,0.08)] transition duration-300 hover:-translate-y-1.5 hover:border-blue-200 hover:shadow-[0_28px_85px_rgba(7,87,168,0.16)]">
+    <article className="group overflow-hidden rounded-[1.2rem] border border-sky-100 bg-white shadow-[0_18px_55px_rgba(74,166,217,0.10)] transition duration-300 hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-[0_28px_85px_rgba(74,166,217,0.18)]">
       <Link to={`/product/${productId}`} className="block">
-        <div className="relative grid h-56 place-items-center overflow-hidden rounded-md bg-[radial-gradient(circle_at_50%_30%,rgba(8,160,75,0.10),transparent_32%),linear-gradient(135deg,#f8fcff,#eef7ff)] ring-1 ring-blue-50">
-          <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-black text-brand-green shadow-[0_10px_24px_rgba(8,160,75,0.12)]">
-            {product.isFeatured ? 'Featured' : product.brand || 'Babycure'}
+        <div className="relative grid h-72 place-items-center overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.95),transparent_9rem),linear-gradient(135deg,#eaf8ff,#f6fff4_45%,#fff3d8)]">
+          <span className="absolute left-0 top-0 rounded-br-xl bg-white/92 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-brand-green shadow-[0_10px_24px_rgba(124,197,118,0.14)]">
+            {product.isFeatured ? 'Bestseller ★' : 'Babycure ★'}
           </span>
           {image ? (
-            <img src={image} alt={product.name} className="h-full w-full object-contain p-6 transition duration-300 group-hover:scale-105" loading="lazy" />
+            <img src={image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
           ) : (
             <ProductArt type={product.type} color={product.color} />
           )}
         </div>
-        <h3 className="mt-4 min-h-12 text-[15px] font-black leading-snug text-slate-950">{product.name}</h3>
+        <div className="px-4 pt-4">
+          <span className="rounded-md bg-brand-mist px-2 py-1 text-[11px] font-extrabold text-brand-ink">All Baby Types</span>
+          <h3 className="mt-3 min-h-12 text-[15px] font-black leading-snug text-brand-ink">{product.name}</h3>
+        </div>
       </Link>
-      <div className="mt-2 flex items-center justify-between gap-3">
+      <div className="mt-2 flex items-center justify-between gap-3 px-4">
         <div>
-          <p className="text-lg font-black text-slate-950">{formatPrice(product.price)}</p>
+          <p className="text-lg font-black text-brand-ink">{formatPrice(product.price)}</p>
           <p className="text-xs font-bold text-slate-400 line-through">{formatPrice(mrp)}</p>
         </div>
         <Rating rating={rating} reviews={reviews} />
       </div>
-      <div className="mt-4 grid grid-cols-[1fr_46px] gap-2">
+      <div className="grid grid-cols-[1fr_46px] gap-2 p-4">
         <button
           className="flex items-center justify-center gap-2 rounded-full bg-brand-blue px-4 py-3 text-sm font-black text-white shadow-[0_16px_38px_rgba(74,166,217,0.24)] transition duration-300 hover:-translate-y-1 hover:bg-sky-500 hover:shadow-[0_22px_54px_rgba(74,166,217,0.30)] active:translate-y-0 disabled:opacity-60"
           type="button"
