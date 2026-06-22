@@ -27,21 +27,21 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-sky-100/80 bg-white/78 shadow-[0_14px_45px_rgba(74,166,217,0.10)] backdrop-blur-2xl">
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-4 py-2 md:gap-2.5 lg:px-5 lg:py-1.5">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-2 pl-5 pr-3 md:gap-4 lg:py-1.5 lg:pl-6 lg:pr-4">
         <Logo />
-        <div className="hidden items-center justify-center gap-3 sm:flex">
-          <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue md:flex">
+        <div className="hidden min-w-0 items-center justify-start gap-4 sm:flex xl:gap-5">
+          <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue lg:flex">
             All Categories <ChevronDown className="h-4 w-4" />
           </Link>
-          <SearchBar className="w-full max-w-[320px]" />
-          <Link to="/category" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-ink shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:text-brand-blue xl:grid" aria-label="Search products">
+          <SearchBar className="w-full max-w-[300px] xl:max-w-[340px]" />
+          <Link to="/category" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-ink shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:text-brand-blue 2xl:grid" aria-label="Search products">
             <Search className="h-5 w-5" />
           </Link>
-          <Link to="/wishlist" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-green shadow-[0_14px_32px_rgba(124,197,118,0.14)] transition hover:-translate-y-0.5 hover:bg-brand-leaf xl:grid" aria-label="Wishlist">
-            <Heart className="h-5 w-5" />
+          <Link to="/wishlist" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-red-500 shadow-[0_14px_32px_rgba(239,68,68,0.14)] transition hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-600 xl:grid" aria-label="Wishlist">
+            <Heart className="h-5 w-5 fill-current" />
           </Link>
         </div>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-3 xl:gap-4">
           <Link to={user?.role === 'admin' ? '/admin' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
               <CircleUserRound className="h-5 w-5" />
@@ -53,7 +53,7 @@ export default function Header() {
               Logout
             </button>
           )}
-          <Link to="/orders" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-blue shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:bg-sky-50 lg:grid" aria-label="Orders">
+          <Link to="/orders" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-blue shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:bg-sky-50 xl:grid" aria-label="Orders">
             <PackageCheck className="h-5 w-5" />
           </Link>
           <Link to="/cart" className="relative flex items-center gap-2 rounded-full px-2 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50">
@@ -73,7 +73,7 @@ export default function Header() {
       <div className="mx-auto block max-w-[1180px] px-4 pb-3 sm:hidden">
         <SearchBar compact />
       </div>
-      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-7 px-4 pb-3 text-sm font-extrabold text-brand-ink lg:flex">
+      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-9 px-4 pb-3 text-sm font-extrabold text-brand-ink lg:flex xl:gap-11">
         {navLinks.map(({ label, to }) => (
           <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `rounded-full px-5 py-2.5 transition ${isActive ? 'bg-sky-50 text-brand-blue shadow-[0_12px_28px_rgba(74,166,217,0.12)]' : 'hover:bg-sky-50 hover:text-brand-blue'}`}>
             {label}
@@ -81,9 +81,19 @@ export default function Header() {
         ))}
       </nav>
       {menuOpen && (
-        <div className="fixed inset-0 top-[96px] z-[70] bg-brand-ink/20 backdrop-blur-sm lg:hidden">
-          <nav className="mx-3 mt-3 max-h-[calc(100vh-118px)] overflow-y-auto rounded-[1.6rem] border border-sky-100 bg-white/96 p-4 shadow-[0_28px_90px_rgba(74,166,217,0.22)]">
-          <div className="mx-auto grid max-w-7xl gap-2">
+        <div className="baby-drawer-backdrop fixed inset-0 z-[70] bg-brand-ink/35 lg:hidden">
+          <button type="button" className="absolute inset-0 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
+          <nav className="baby-drawer-panel absolute bottom-3 right-3 top-3 flex w-[min(90vw,390px)] flex-col overflow-hidden rounded-[1.6rem] border border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)]">
+          <div className="flex items-center justify-between border-b border-sky-100 bg-white px-4 py-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>
+              <h2 className="font-display text-xl font-black text-brand-ink">Menu</h2>
+            </div>
+            <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-sky-50 text-brand-blue" onClick={() => setMenuOpen(false)} aria-label="Close menu">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="grid gap-2 overflow-y-auto bg-white p-4">
             {navLinks.map(({ label, to }) => (
               <NavLink key={`${label}-${to}`} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `rounded-2xl px-4 py-3.5 text-sm font-black transition ${isActive ? 'bg-brand-blue text-white shadow-[0_14px_34px_rgba(74,166,217,0.22)]' : 'bg-sky-50/70 text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}>
                 {label}

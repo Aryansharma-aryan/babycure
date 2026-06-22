@@ -17,15 +17,19 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [otpHint, setOtpHint] = useState('')
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetOtpSent, setResetOtpSent] = useState(false)
+  const [resetOtpHint, setResetOtpHint] = useState('')
   const [pending, setPending] = useState(false)
   const navigate = useNavigate()
-  const { isAuthenticated, login, logout, register, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
+  const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
 
   const title = useMemo(() => {
     if (isAuthenticated) return 'Your Babycure account'
+    if (authType === 'forgot') return resetOtpSent ? 'Reset your password' : 'Forgot password'
     if (authType === 'phone') return otpSent ? 'Verify phone OTP' : 'Continue with phone'
     return mode === 'login' ? 'Sign in to continue' : 'Create your account'
-  }, [authType, isAuthenticated, mode, otpSent])
+  }, [authType, isAuthenticated, mode, otpSent, resetOtpSent])
 
   const handleEmailSubmit = async (event) => {
     event.preventDefault()
@@ -97,6 +101,60 @@ export default function LoginPage() {
     try {
       const response = await verifyPhoneOtp({ phone, otp: data.otp })
       navigate(response.user?.role === 'admin' ? '/admin' : '/')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const handleSendPasswordOtp = async (event) => {
+    event.preventDefault()
+
+    if (!resetEmail || !resetEmail.includes('@')) {
+      toast.error('Please enter your registered email address')
+      return
+    }
+
+    setPending(true)
+    try {
+      const response = await sendPasswordResetOtp({ email: resetEmail })
+      setResetOtpHint(response.devOtp || '')
+      setResetOtpSent(true)
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault()
+    const data = Object.fromEntries(new FormData(event.currentTarget))
+
+    if (!/^\d{6}$/.test(String(data.otp || ''))) {
+      toast.error('Please enter the 6 digit OTP from your email')
+      return
+    }
+
+    if (!data.password || String(data.password).length < 8) {
+      toast.error('New password must be at least 8 characters')
+      return
+    }
+
+    if (data.password !== data.confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+
+    setPending(true)
+    try {
+      await resetPassword({ email: resetEmail, otp: data.otp, password: data.password })
+      setAuthType('email')
+      setMode('login')
+      setResetEmail('')
+      setResetOtpSent(false)
+      setResetOtpHint('')
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -205,11 +263,45 @@ export default function LoginPage() {
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm font-bold">
                     <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" className="accent-brand-blue" /> Remember me</label>
-                    <button type="button" className="text-brand-blue">Forgot password?</button>
+                    <button type="button" className="text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('forgot'); setResetEmail(''); setResetOtpSent(false); setResetOtpHint('') }}>Forgot password?</button>
                   </div>
                   <Button type="submit" className="mt-7 w-full" disabled={pending}>
                     {pending ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
                   </Button>
+                </form>
+              ) : authType === 'forgot' ? (
+                <form className="mt-7 rounded-[1.5rem] border border-sky-100 bg-white p-5 shadow-[0_18px_55px_rgba(74,166,217,0.10)]" onSubmit={resetOtpSent ? handleResetPassword : handleSendPasswordOtp}>
+                  <p className="mb-5 text-sm font-semibold leading-7 text-slate-600">
+                    We will send a 6 digit OTP to your registered email. Use it to create a new secure password.
+                  </p>
+                  <Input
+                    label="Registered Email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={resetEmail}
+                    onChange={(event) => setResetEmail(event.target.value.trim().toLowerCase())}
+                    disabled={resetOtpSent}
+                    autoComplete="email"
+                  />
+                  {resetOtpSent && (
+                    <div className="mt-4 space-y-4">
+                      {resetOtpHint && (
+                        <div className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-black text-brand-green">
+                          Development OTP: <span className="font-display text-lg text-slate-950">{resetOtpHint}</span>
+                        </div>
+                      )}
+                      <Input label="Email OTP" name="otp" inputMode="numeric" maxLength="6" placeholder="123456" autoComplete="one-time-code" />
+                      <Input label="New Password" name="password" type="password" placeholder="At least 8 characters" autoComplete="new-password" />
+                      <Input label="Confirm Password" name="confirmPassword" type="password" placeholder="Confirm new password" autoComplete="new-password" />
+                    </div>
+                  )}
+                  <Button type="submit" variant="green" className="mt-7 w-full" disabled={pending}>
+                    {pending ? 'Please wait...' : resetOtpSent ? 'Verify OTP & Reset Password' : 'Send Reset OTP'}
+                  </Button>
+                  <button type="button" className="mt-4 text-sm font-black text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('email'); setResetEmail(''); setResetOtpSent(false); setResetOtpHint('') }}>
+                    Back to login
+                  </button>
                 </form>
               ) : (
                 <form className="mt-7" onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}>

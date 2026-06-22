@@ -7,6 +7,8 @@ export const authService = {
   logout: () => api.post('/auth/logout'),
   sendPhoneOtp: (payload) => api.post('/auth/send-phone-otp', payload),
   verifyPhoneOtp: (payload) => api.post('/auth/verify-phone-otp', payload),
+  sendPasswordResetOtp: (payload) => api.post('/auth/password/forgot', payload),
+  resetPassword: (payload) => api.post('/auth/password/reset', payload),
 }
 
 export const categoryService = {

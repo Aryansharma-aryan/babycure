@@ -121,10 +121,21 @@ export default function CategoryPage() {
         </div>
       </div>
       {filtersOpen && (
-        <div className="fixed inset-0 z-[80] lg:hidden">
-          <button type="button" aria-label="Close filters" className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setFiltersOpen(false)} />
-          <div className="absolute bottom-3 right-3 top-3 w-[min(92vw,390px)] overflow-y-auto rounded-[1.6rem] border border-sky-100 bg-white p-4 shadow-[0_30px_90px_rgba(74,166,217,0.24)]">
-            <LiveFilterPanel categories={categories} filters={filters} search={search} setSearch={setSearch} updateParam={updateParam} />
+        <div className="baby-drawer-backdrop fixed inset-0 z-[80] lg:hidden">
+          <button type="button" aria-label="Close filters" className="absolute inset-0 bg-slate-950/40" onClick={() => setFiltersOpen(false)} />
+          <div className="baby-drawer-panel absolute bottom-3 right-3 top-3 flex w-[min(92vw,390px)] flex-col overflow-hidden rounded-[1.6rem] border border-sky-100 bg-white shadow-[0_30px_90px_rgba(23,50,77,0.22)]">
+            <div className="flex items-center justify-between border-b border-sky-100 bg-white px-5 py-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>
+                <h2 className="font-display text-xl font-black text-brand-ink">Filters</h2>
+              </div>
+              <button type="button" onClick={() => setFiltersOpen(false)} className="rounded-full bg-sky-50 px-4 py-2 text-sm font-black text-brand-blue">
+                Close
+              </button>
+            </div>
+            <div className="overflow-y-auto bg-white p-4">
+              <LiveFilterPanel drawer categories={categories} filters={filters} search={search} setSearch={setSearch} updateParam={updateParam} />
+            </div>
           </div>
         </div>
       )}
@@ -158,9 +169,9 @@ function CategoryChips({ categories, activeCategory, updateParam }) {
   )
 }
 
-function LiveFilterPanel({ categories, filters, search, setSearch, updateParam }) {
+function LiveFilterPanel({ categories, filters, search, setSearch, updateParam, drawer = false }) {
   return (
-    <div className="sticky top-[142px] bg-white">
+    <div className={`${drawer ? 'bg-white' : 'sticky top-[142px] rounded-[1.5rem] border border-sky-100 bg-white p-5 shadow-[0_22px_70px_rgba(74,166,217,0.10)]'}`}>
       <div className="mb-5 flex items-center gap-3 text-base font-extrabold text-brand-ink">
         <span>Sort By:</span>
         <select className="flex-1 rounded-full border-0 bg-white py-2 text-base font-extrabold outline-none" value={filters.sort} onChange={(event) => updateParam('sort', event.target.value)}>

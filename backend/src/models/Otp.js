@@ -4,9 +4,15 @@ const otpSchema = new mongoose.Schema(
   {
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
       trim: true,
       index: true,
+    },
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      index: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
     otpHash: {
       type: String,
@@ -26,7 +32,7 @@ const otpSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['phone_signup'],
+      enum: ['phone_signup', 'password_reset'],
       default: 'phone_signup',
     },
   },
@@ -34,6 +40,15 @@ const otpSchema = new mongoose.Schema(
     timestamps: true,
   },
 )
+
+otpSchema.pre('validate', function requireOtpTarget(next) {
+  if (!this.phone && !this.email) {
+    next(new Error('OTP requires phone or email.'))
+    return
+  }
+
+  next()
+})
 
 const Otp = mongoose.model('Otp', otpSchema)
 

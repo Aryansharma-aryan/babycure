@@ -80,6 +80,18 @@ export function AuthProvider({ children }) {
     return response
   }, [])
 
+  const sendPasswordResetOtp = useCallback(async (payload) => {
+    const response = await authService.sendPasswordResetOtp(payload)
+    toast.success('Password reset OTP sent to your email')
+    return response
+  }, [])
+
+  const resetPassword = useCallback(async (payload) => {
+    const response = await authService.resetPassword(payload)
+    toast.success('Password reset successfully')
+    return response
+  }, [])
+
   const value = useMemo(
     () => ({
       isAuthenticated: Boolean(user),
@@ -88,11 +100,13 @@ export function AuthProvider({ children }) {
       logout,
       refreshUser,
       register,
+      resetPassword,
+      sendPasswordResetOtp,
       sendPhoneOtp,
       user,
       verifyPhoneOtp,
     }),
-    [loading, login, logout, refreshUser, register, sendPhoneOtp, user, verifyPhoneOtp],
+    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
