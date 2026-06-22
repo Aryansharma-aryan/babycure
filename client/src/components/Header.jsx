@@ -27,13 +27,13 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-sky-100/80 bg-white/78 shadow-[0_14px_45px_rgba(74,166,217,0.10)] backdrop-blur-2xl">
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-2 md:gap-4 lg:px-8 lg:py-1.5">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-4 py-2 md:gap-2.5 lg:px-5 lg:py-1.5">
         <Logo />
-        <div className="hidden items-center justify-center gap-4 sm:flex">
-          <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-5 py-3 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue md:flex">
+        <div className="hidden items-center justify-center gap-3 sm:flex">
+          <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue md:flex">
             All Categories <ChevronDown className="h-4 w-4" />
           </Link>
-          <SearchBar className="w-full max-w-[430px]" />
+          <SearchBar className="w-full max-w-[320px]" />
           <Link to="/category" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-ink shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:text-brand-blue xl:grid" aria-label="Search products">
             <Search className="h-5 w-5" />
           </Link>
@@ -41,7 +41,7 @@ export default function Header() {
             <Heart className="h-5 w-5" />
           </Link>
         </div>
-        <div className="flex items-center justify-end gap-2 sm:gap-3">
+        <div className="flex items-center justify-end gap-2">
           <Link to={user?.role === 'admin' ? '/admin' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
               <CircleUserRound className="h-5 w-5" />
