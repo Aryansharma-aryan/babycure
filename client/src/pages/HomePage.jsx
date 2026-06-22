@@ -1,116 +1,364 @@
-import { Heart, Leaf, PackageCheck, ShieldCheck, Truck } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  ArrowRight,
+  Baby,
+  Droplets,
+  Heart,
+  Leaf,
+  MessageCircleHeart,
+  PackageCheck,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Star,
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
 import Button from '../components/Button'
-import CategoryCard from '../components/CategoryCard'
-import FeatureCard from '../components/FeatureCard'
-import ProductArt from '../components/ProductArt'
-import ProductCard from '../components/ProductCard'
-import { categories, images, products } from '../data/products'
+import { images } from '../data/products'
 import heroImage from '../assets/heroo.png'
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: { opacity: 1, y: 0 },
+}
+
+const stagger = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08 },
+  },
+}
+
+const categories = [
+  { title: 'Baby Lotion', icon: Droplets, color: 'from-sky-50 to-white' },
+  { title: 'Baby Shampoo', icon: Sparkles, color: 'from-green-50 to-white' },
+  { title: 'Baby Oil', icon: Leaf, color: 'from-sky-50 to-green-50' },
+  { title: 'Diapers', icon: PackageCheck, color: 'from-white to-sky-50' },
+  { title: 'Baby Wipes', icon: Baby, color: 'from-green-50 to-white' },
+  { title: 'Skin Care', icon: Heart, color: 'from-white to-green-50' },
+]
+
+const featuredProducts = [
+  {
+    name: 'Gentle Baby Wash',
+    price: 399,
+    oldPrice: 549,
+    badge: '27% OFF',
+    image: 'https://images.unsplash.com/photo-1584305574647-0cc949a2bb9f?auto=format&fit=crop&w=700&q=80',
+    rating: 4.9,
+  },
+  {
+    name: 'Moisturizing Baby Lotion',
+    price: 499,
+    oldPrice: 649,
+    badge: 'Best Seller',
+    image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=700&q=80',
+    rating: 4.8,
+  },
+  {
+    name: 'Soothing Diaper Rash Cream',
+    price: 299,
+    oldPrice: 399,
+    badge: 'Gentle Care',
+    image: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=700&q=80',
+    rating: 4.7,
+  },
+  {
+    name: 'Premium Baby Wipes',
+    price: 199,
+    oldPrice: 249,
+    badge: 'Soft Touch',
+    image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=700&q=80',
+    rating: 4.8,
+  },
+]
+
+const loveCards = [
+  { icon: ShieldCheck, title: 'Dermatologist Approved', copy: 'Formulas tested for daily baby care routines.' },
+  { icon: Leaf, title: 'Natural Ingredients', copy: 'Soft plant-inspired care for delicate skin.' },
+  { icon: Baby, title: 'Safe for Sensitive Skin', copy: 'Balanced, gentle and made for newborn comfort.' },
+  { icon: Heart, title: 'Cruelty Free', copy: 'Kind care for babies, parents and the planet.' },
+]
+
+const testimonials = [
+  { name: 'Aarohi M.', text: 'The lotion feels soft and premium. My baby skin stays calm after every bath.', rating: 5 },
+  { name: 'Neha S.', text: 'Beautiful packaging, gentle fragrance and very smooth checkout experience.', rating: 5 },
+  { name: 'Ritika P.', text: 'BabyCure feels trustworthy. The wipes and wash became our daily essentials.', rating: 5 },
+]
 
 export default function HomePage() {
   return (
-    <>
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid min-h-[620px] overflow-hidden rounded-lg border border-blue-100 bg-white shadow-[0_32px_110px_rgba(7,87,168,0.13)] lg:grid-cols-[0.98fr_1.02fr]">
-          <div className="relative flex flex-col justify-center overflow-hidden bg-[radial-gradient(circle_at_14%_20%,rgba(8,160,75,0.13),transparent_28%),radial-gradient(circle_at_88%_12%,rgba(7,87,168,0.09),transparent_32%),linear-gradient(135deg,#ffffff,#f6fbff)] p-7 md:p-12">
-            <div className="absolute -left-12 top-10 h-48 w-48 rounded-full border border-green-100/80" />
-            <div className="absolute bottom-10 right-8 hidden h-28 w-28 rounded-full bg-blue-50/80 lg:block" />
-            <p className="relative mb-5 inline-flex w-max items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black uppercase tracking-[0.16em] text-brand-green ring-1 ring-green-100 shadow-[0_10px_30px_rgba(8,160,75,0.08)]">
-              <Leaf className="h-4 w-4" /> Natural and safe
-            </p>
-            <h1 className="relative max-w-2xl font-display text-5xl font-black leading-[1.04] text-brand-blue md:text-6xl xl:text-7xl">
-              Gentle baby care, <span className="text-brand-green">pure daily protection</span>
-            </h1>
-            <p className="relative mt-6 max-w-xl text-lg font-semibold leading-8 text-slate-600 md:text-xl">
-              Thoughtfully made bath, skin and diapering essentials for delicate baby skin and confident parents.
-            </p>
-            <div className="relative mt-8 flex flex-wrap gap-4">
-              <Button to="/category">Shop Baby Care</Button>
-              <Button to={`/product/${products[0].id}`} variant="outline">Explore Best Seller</Button>
-            </div>
-            <div className="relative mt-9 grid max-w-xl gap-3 sm:grid-cols-3">
-              {[
-                ['96%', 'Parent loved'],
-                ['0%', 'Harsh sulphates'],
-                ['24/7', 'Care support'],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-md border border-blue-100 bg-white/90 px-4 py-3 shadow-[0_16px_40px_rgba(7,87,168,0.08)] backdrop-blur">
-                  <p className="font-display text-2xl font-black text-brand-blue">{value}</p>
-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="relative grid min-h-[500px] place-items-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-green-50 p-6 md:p-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_52%_40%,rgba(8,160,75,0.22),transparent_28%),radial-gradient(circle_at_58%_64%,rgba(7,87,168,0.20),transparent_38%)]" />
-            <div className="absolute left-10 top-10 h-28 w-28 rounded-full border border-green-100 bg-white/40" />
-            <div className="absolute bottom-10 right-10 h-36 w-36 rounded-full border border-blue-100 bg-white/50" />
-            <img
-              src={heroImage}
-              alt="Babycure premium hero"
-              className="relative z-10 h-[82%] max-h-[520px] w-[92%] max-w-[680px] object-contain drop-shadow-[0_44px_80px_rgba(7,87,168,0.26)]"
-              loading="eager"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-4 md:grid-cols-4">
-        <FeatureCard icon={Truck} title="Free Shipping" copy="On orders above Rs.999" />
-        <FeatureCard icon={PackageCheck} title="Easy Returns" copy="7 day return policy" />
-        <FeatureCard icon={ShieldCheck} title="Secure Checkout" copy="Protected payments" />
-        <FeatureCard icon={Heart} title="Parent Support" copy="Care team assistance" />
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <SectionTitle title="Best Selling Babycare" action="View all products" to="/category" />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} />)}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <SectionTitle title="Shop by Category" action="View all categories" to="/category" />
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
-          {categories.map((category) => <CategoryCard key={category.id} category={category} />)}
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="grid overflow-hidden rounded-md border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-green-50 p-8 shadow-soft lg:grid-cols-[0.9fr_1fr]">
-          <div>
-            <p className="font-black text-brand-green">Limited Care Box</p>
-            <h2 className="mt-3 font-display text-5xl font-black text-brand-blue">Flat 20% OFF</h2>
-            <p className="mt-3 font-semibold text-slate-600">On complete newborn bath and skin care bundles.</p>
-            <Button to="/category" className="mt-7">Shop Now</Button>
-          </div>
-          <div className="relative mt-8 flex items-end justify-center gap-3 lg:mt-0">
-            <span className="absolute right-6 top-0 grid h-20 w-20 place-items-center rounded-full bg-brand-blue text-center text-lg font-black leading-tight text-white">20%<br />OFF</span>
-            {products.slice(0, 3).map((product) => <ProductArt key={product.id} type={product.type} color={product.color} />)}
-          </div>
-        </div>
-        <div className="grid items-center gap-6 overflow-hidden rounded-md border border-slate-200 bg-white p-8 shadow-soft md:grid-cols-[1fr_0.8fr]">
-          <div>
-            <h2 className="font-display text-3xl font-black text-brand-blue">Why parents choose Babycure</h2>
-            {['Natural and safe ingredients', 'Dermatologically tested formulas', 'Trusted daily baby care', 'Designed for newborn comfort'].map((item) => (
-              <p key={item} className="mt-4 flex items-center gap-2 text-sm font-bold text-slate-700">
-                <ShieldCheck className="h-5 w-5 text-brand-green" /> {item}
-              </p>
-            ))}
-          </div>
-          <img src={images.soft} alt="Mother with baby" className="h-64 w-full rounded-md object-cover" loading="lazy" />
-        </div>
-      </section>
-
-    </>
+    <main className="overflow-hidden bg-white text-brand-ink">
+      <HeroSection />
+      <CategorySection />
+      <FeaturedSection />
+      <ParentsLoveSection />
+      <BestSellersSection />
+      <EmotionalBanner />
+      <TestimonialsSection />
+      <NewsletterSection />
+    </main>
   )
 }
 
-function SectionTitle({ title, action, to }) {
+function HeroSection() {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4">
-      <h2 className="font-display text-3xl font-black text-slate-950">{title}</h2>
-      <Button to={to} variant="ghost" className="px-4 py-2">{action}</Button>
-    </div>
+    <section className="relative isolate min-h-[780px] overflow-hidden bg-white">
+      <img
+        src={heroImage}
+        alt="Mother holding smiling baby with BabyCure products"
+        className="absolute inset-0 h-full w-full object-cover object-[64%_center]"
+        loading="eager"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,#FFFFFF_0%,rgba(255,255,255,0.96)_31%,rgba(255,255,255,0.78)_47%,rgba(255,255,255,0.20)_72%,rgba(255,255,255,0)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_20%,rgba(124,197,118,0.22),transparent_24rem),radial-gradient(circle_at_78%_20%,rgba(74,166,217,0.16),transparent_30rem)]" />
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={stagger}
+        className="relative mx-auto grid min-h-[780px] max-w-7xl items-center px-4 py-14 lg:grid-cols-[0.82fr_1.18fr] lg:px-6"
+      >
+        <motion.div variants={fadeUp} transition={{ duration: 0.65, ease: 'easeOut' }} className="max-w-2xl pt-6">
+          <span className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-white/88 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.22em] text-brand-green shadow-[0_18px_50px_rgba(124,197,118,0.16)] backdrop-blur">
+            <Sparkles className="h-4 w-4" /> Premium baby care
+          </span>
+          <h1 className="mt-8 font-display text-[56px] font-extrabold leading-[0.95] tracking-[-0.02em] text-brand-ink sm:text-[78px] lg:text-[96px]">
+            Pure Love. <span className="text-brand-blue">Gentle</span> <span className="text-brand-green">Care.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-lg font-medium leading-8 text-slate-600 sm:text-xl">
+            Safe, dermatologist-tested baby essentials crafted with love for your little one.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-4">
+            <Button to="/category" className="rounded-full px-8 py-4 text-base shadow-[0_22px_55px_rgba(74,166,217,0.22)]">
+              Shop Now <ArrowRight className="h-5 w-5" />
+            </Button>
+            <Button to="/category" variant="outline" className="rounded-full border-brand-green/40 px-8 py-4 text-base">
+              Explore Collection
+            </Button>
+          </div>
+          <div className="mt-12 grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              ['10k+', 'Happy Parents'],
+              ['97%', 'Natural Care'],
+              ['4.9', 'Rating Score'],
+              ['24/7', 'Parent Support'],
+            ].map(([value, label]) => (
+              <motion.div key={label} variants={fadeUp} className="rounded-3xl border border-sky-100 bg-white/76 p-5 text-center shadow-[0_20px_60px_rgba(74,166,217,0.12)] backdrop-blur">
+                <p className="font-display text-3xl font-extrabold text-brand-blue">{value}</p>
+                <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div variants={fadeUp} transition={{ duration: 0.75, ease: 'easeOut' }} className="relative hidden min-h-[610px] lg:block">
+          <div className="absolute right-4 top-20 rounded-full border border-white/80 bg-white/78 px-6 py-5 text-center shadow-[0_24px_70px_rgba(74,166,217,0.16)] backdrop-blur-md">
+            <p className="text-sm font-bold text-slate-500">Loved by</p>
+            <p className="font-display text-4xl font-extrabold text-brand-ink">10,000+</p>
+            <p className="text-sm font-bold text-slate-500">Happy Parents</p>
+          </div>
+          <div className="absolute bottom-9 left-16 right-0 grid grid-cols-3 gap-3 rounded-[2rem] border border-white bg-white/88 p-4 shadow-[0_28px_80px_rgba(124,197,118,0.20)] backdrop-blur">
+            {[
+              [ShieldCheck, 'Dermatologist Tested'],
+              [Droplets, 'Tear-Free Formula'],
+              [Baby, 'Safe for Newborns'],
+            ].map(([Icon, label]) => (
+              <div key={label} className="text-center">
+                <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-brand-leaf text-brand-green">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <p className="mt-2 text-[11px] font-extrabold leading-4 text-brand-ink">{label}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+    </section>
+  )
+}
+
+function CategorySection() {
+  return (
+    <MotionSection className="mx-auto max-w-7xl px-4 py-20">
+      <SectionHeading eyebrow="Soft routines" title="Shop by Category" copy="Everything parents need for bath time, skin care, diapering and daily comfort." />
+      <motion.div variants={stagger} className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        {categories.map(({ title, icon: Icon, color }) => (
+          <motion.div key={title} variants={fadeUp}>
+            <Link to={`/category?search=${encodeURIComponent(title)}`} className={`group block rounded-[2rem] border border-sky-100 bg-gradient-to-br ${color} p-5 text-center shadow-[0_18px_60px_rgba(74,166,217,0.10)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_28px_80px_rgba(74,166,217,0.18)]`}>
+              <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white text-brand-blue shadow-[0_15px_40px_rgba(74,166,217,0.12)] transition group-hover:scale-110 group-hover:text-brand-green">
+                <Icon className="h-7 w-7" />
+              </span>
+              <h3 className="mt-4 font-display text-base font-extrabold text-brand-ink">{title}</h3>
+            </Link>
+          </motion.div>
+        ))}
+      </motion.div>
+    </MotionSection>
+  )
+}
+
+function FeaturedSection() {
+  return (
+    <MotionSection className="bg-[linear-gradient(180deg,#FFFFFF,#F3FBFF)] py-20">
+      <div className="mx-auto max-w-7xl px-4">
+        <SectionHeading eyebrow="Parent favorites" title="Featured Products" copy="Premium essentials with clean textures, gentle formulas and beautiful care rituals." action="View Collection" />
+        <motion.div variants={stagger} className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {featuredProducts.map((product) => <PremiumProductCard key={product.name} product={product} />)}
+        </motion.div>
+      </div>
+    </MotionSection>
+  )
+}
+
+function PremiumProductCard({ product, large = false }) {
+  return (
+    <motion.article variants={fadeUp} className={`group rounded-[2rem] border border-sky-100 bg-white p-4 shadow-[0_24px_75px_rgba(74,166,217,0.12)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_34px_100px_rgba(74,166,217,0.20)] ${large ? 'lg:grid lg:grid-cols-[0.95fr_1fr] lg:items-center lg:p-6' : ''}`}>
+      <Link to="/category" className={`relative block overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-sky-50 to-green-50 ${large ? 'h-80' : 'h-64'}`}>
+        <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" loading="lazy" />
+        <span className="absolute left-4 top-4 rounded-full bg-white/92 px-4 py-2 text-xs font-extrabold text-brand-green shadow-[0_12px_30px_rgba(124,197,118,0.18)]">{product.badge}</span>
+        <button type="button" className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/92 text-brand-green shadow-[0_12px_30px_rgba(124,197,118,0.18)] transition hover:scale-110" aria-label="Wishlist">
+          <Heart className="h-5 w-5" />
+        </button>
+      </Link>
+      <div className={large ? 'lg:pl-6' : ''}>
+        <div className="mt-5 flex items-center gap-1 text-yellow-400">
+          {Array.from({ length: 5 }).map((_, index) => <Star key={index} className="h-4 w-4 fill-current" />)}
+          <span className="ml-2 text-xs font-bold text-slate-500">{product.rating}</span>
+        </div>
+        <h3 className="mt-3 font-display text-xl font-extrabold text-brand-ink">{product.name}</h3>
+        <div className="mt-3 flex items-center gap-3">
+          <p className="font-display text-2xl font-extrabold text-brand-blue">Rs.{product.price}</p>
+          <p className="font-bold text-slate-300 line-through">Rs.{product.oldPrice}</p>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link to="/category" className="rounded-full bg-brand-blue px-4 py-3 text-center text-sm font-extrabold text-white shadow-[0_18px_45px_rgba(74,166,217,0.22)] transition hover:-translate-y-0.5">
+            Add to Cart
+          </Link>
+          <Link to="/category" className="rounded-full border border-green-100 bg-brand-leaf px-4 py-3 text-center text-sm font-extrabold text-brand-green transition hover:-translate-y-0.5">
+            Quick View
+          </Link>
+        </div>
+      </div>
+    </motion.article>
+  )
+}
+
+function ParentsLoveSection() {
+  return (
+    <MotionSection className="mx-auto max-w-7xl px-4 py-20">
+      <SectionHeading eyebrow="Why parents love BabyCure" title="Clean, gentle and made with care" copy="Every touchpoint is designed to feel safe, soft and reassuring." />
+      <motion.div variants={stagger} className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        {loveCards.map(({ icon: Icon, title, copy }) => (
+          <motion.div key={title} variants={fadeUp} className="rounded-[2rem] border border-sky-100 bg-white p-7 shadow-[0_22px_70px_rgba(74,166,217,0.10)] transition hover:-translate-y-2 hover:shadow-[0_32px_95px_rgba(124,197,118,0.16)]">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-sky-50 to-green-50 text-brand-blue">
+              <Icon className="h-7 w-7" />
+            </span>
+            <h3 className="mt-6 font-display text-xl font-extrabold text-brand-ink">{title}</h3>
+            <p className="mt-3 text-sm font-medium leading-7 text-slate-500">{copy}</p>
+          </motion.div>
+        ))}
+      </motion.div>
+    </MotionSection>
+  )
+}
+
+function BestSellersSection() {
+  return (
+    <MotionSection className="bg-brand-mist py-20">
+      <div className="mx-auto max-w-7xl px-4">
+        <SectionHeading eyebrow="Best sellers" title="Loved in daily routines" copy="Large, premium product stories for parent-loved essentials." />
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          {featuredProducts.slice(0, 2).map((product) => <PremiumProductCard key={product.name} product={product} large />)}
+        </div>
+      </div>
+    </MotionSection>
+  )
+}
+
+function EmotionalBanner() {
+  return (
+    <MotionSection className="mx-auto max-w-7xl px-4 py-20">
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white bg-white shadow-[0_35px_110px_rgba(74,166,217,0.18)]">
+        <img src={images.soft} alt="Mother and baby smiling together" className="h-[520px] w-full object-cover" loading="lazy" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/78 to-transparent" />
+        <div className="absolute inset-y-0 left-0 flex max-w-xl flex-col justify-center px-7 sm:px-12">
+          <span className="mb-5 w-max rounded-full bg-brand-leaf px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-green">Emotional care</span>
+          <h2 className="font-display text-4xl font-extrabold leading-tight text-brand-ink sm:text-6xl">Made With Love, Trusted By Parents</h2>
+          <p className="mt-5 text-base font-medium leading-8 text-slate-600">Gentle essentials that make every bath, massage and cuddle feel calmer.</p>
+          <Button to="/category" className="mt-8 w-max rounded-full px-8 py-4">Shop Best Sellers</Button>
+        </div>
+      </div>
+    </MotionSection>
+  )
+}
+
+function TestimonialsSection() {
+  return (
+    <MotionSection className="bg-[linear-gradient(180deg,#FFFFFF,#F5FFF3)] py-20">
+      <div className="mx-auto max-w-7xl px-4">
+        <SectionHeading eyebrow="Happy parents" title="Real love from BabyCure families" copy="Trust grows from gentle products and smooth shopping moments." />
+        <motion.div variants={stagger} className="mt-10 grid gap-5 md:grid-cols-3">
+          {testimonials.map((item) => (
+            <motion.div key={item.name} variants={fadeUp} className="rounded-[2rem] border border-sky-100 bg-white p-7 shadow-[0_22px_70px_rgba(74,166,217,0.10)]">
+              <MessageCircleHeart className="h-8 w-8 text-brand-green" />
+              <div className="mt-5 flex gap-1 text-yellow-400">{Array.from({ length: item.rating }).map((_, index) => <Star key={index} className="h-4 w-4 fill-current" />)}</div>
+              <p className="mt-5 text-sm font-medium leading-7 text-slate-600">"{item.text}"</p>
+              <p className="mt-5 font-display text-lg font-extrabold text-brand-ink">{item.name}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </MotionSection>
+  )
+}
+
+function NewsletterSection() {
+  return (
+    <MotionSection className="mx-auto max-w-7xl px-4 py-20">
+      <div className="grid overflow-hidden rounded-[2.5rem] border border-sky-100 bg-[linear-gradient(120deg,#F3FBFF,#FFFFFF,#F5FFF3)] p-8 shadow-[0_32px_100px_rgba(74,166,217,0.16)] lg:grid-cols-[1fr_0.8fr] lg:p-12">
+        <div>
+          <span className="rounded-full bg-white px-5 py-3 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-blue shadow-[0_12px_32px_rgba(74,166,217,0.12)]">BabyCure club</span>
+          <h2 className="mt-7 max-w-2xl font-display text-4xl font-extrabold leading-tight text-brand-ink sm:text-5xl">Get Exclusive Offers & Parenting Tips</h2>
+          <p className="mt-4 max-w-xl font-medium leading-8 text-slate-600">Join for gentle care advice, launch updates and soft little savings.</p>
+        </div>
+        <form className="mt-8 flex flex-col gap-3 self-center rounded-full bg-white p-2 shadow-[0_20px_65px_rgba(74,166,217,0.14)] sm:flex-row lg:mt-0">
+          <input type="email" placeholder="Enter your email" className="min-h-14 flex-1 rounded-full px-5 text-sm font-semibold outline-none" />
+          <button type="submit" className="rounded-full bg-brand-green px-7 py-4 text-sm font-extrabold text-white shadow-[0_18px_45px_rgba(124,197,118,0.24)] transition hover:-translate-y-0.5">
+            Subscribe
+          </button>
+        </form>
+      </div>
+    </MotionSection>
+  )
+}
+
+function SectionHeading({ eyebrow, title, copy, action }) {
+  return (
+    <motion.div variants={fadeUp} className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-brand-green">{eyebrow}</p>
+        <h2 className="mt-3 max-w-2xl font-display text-4xl font-extrabold tracking-[-0.02em] text-brand-ink sm:text-5xl">{title}</h2>
+        {copy && <p className="mt-4 max-w-2xl text-base font-medium leading-8 text-slate-600">{copy}</p>}
+      </div>
+      {action && (
+        <Link to="/category" className="inline-flex w-max items-center gap-2 rounded-full border border-sky-100 bg-white px-6 py-3 text-sm font-extrabold text-brand-blue shadow-[0_16px_44px_rgba(74,166,217,0.10)] transition hover:-translate-y-0.5">
+          {action} <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
+    </motion.div>
+  )
+}
+
+function MotionSection({ children, className }) {
+  return (
+    <motion.section
+      className={className}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-80px' }}
+      variants={stagger}
+    >
+      {children}
+    </motion.section>
   )
 }

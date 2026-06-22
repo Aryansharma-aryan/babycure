@@ -11,7 +11,7 @@ const welcomeToasts = [
 
 export default function ToastManager() {
   useEffect(() => {
-    const storageKey = 'babycure-welcome-seen-v3'
+    const storageKey = 'babycure-welcome-seen-v4'
     if (localStorage.getItem(storageKey)) return
 
     localStorage.setItem(storageKey, 'true')
@@ -21,7 +21,7 @@ export default function ToastManager() {
           toast.success(message.text)
           return
         }
-        toast(message.text, { icon: index % 2 === 0 ? 'B' : 'Care' })
+        toast(message.text, { icon: index % 2 === 0 ? '🧴' : '💚' })
       }, index * 950),
     )
 
@@ -34,17 +34,17 @@ export default function ToastManager() {
       toastOptions={{
         duration: 2800,
         style: {
-          borderRadius: '10px',
-          border: '1px solid #cfe3f7',
-          color: '#0f172a',
+          borderRadius: '18px',
+          border: '1px solid #d8eefb',
+          color: '#17324D',
           fontWeight: 800,
-          padding: '14px 16px',
-          boxShadow: '0 24px 70px rgba(7, 87, 168, 0.16)',
+          padding: '15px 17px',
+          boxShadow: '0 24px 70px rgba(74, 166, 217, 0.18)',
         },
         className: 'baby-toast',
         success: {
           iconTheme: {
-            primary: '#08a04b',
+            primary: '#7CC576',
             secondary: '#ffffff',
           },
         },

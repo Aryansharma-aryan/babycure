@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["nodemon.*.log", "node_modules", "package-lock.json"]
+}

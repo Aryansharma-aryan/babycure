@@ -1,0 +1,45 @@
+{
+  "name": "babycure-backend",
+  "version": "1.0.0",
+  "description": "Secure and scalable BabyCure ecommerce backend foundation.",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/utils/seedDemoData.js"
+  },
+  "keywords": [
+    "babycure",
+    "mern",
+    "ecommerce",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^1.41.3",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "ioredis": "^5.11.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.0.1",
+    "morgan": "^1.10.1",
+    "multer": "^2.2.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^9.0.1",
+    "razorpay": "^2.9.6",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

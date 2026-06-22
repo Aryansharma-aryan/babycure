@@ -20,4 +20,12 @@ export function PageSkeleton() {
   )
 }
 
+export function ProductGridSkeleton({ count = 6 }) {
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: count }).map((_, index) => <ProductSkeleton key={index} />)}
+    </div>
+  )
+}
+
 export const LoadingSkeleton = PageSkeleton

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import Layout from './components/Layout'
 import { PageSkeleton } from './components/Skeleton'
@@ -13,6 +14,10 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const BlogPage = lazy(() => import('./pages/BlogPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'))
+const OrderDetailsPage = lazy(() => import('./pages/OrderDetailsPage'))
+const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
 
 const router = createBrowserRouter([
   {
@@ -27,6 +32,10 @@ const router = createBrowserRouter([
       { path: 'blog', element: <BlogPage /> },
       { path: 'contact', element: <ContactPage /> },
       { path: 'login', element: <LoginPage /> },
+      { path: 'orders', element: <MyOrdersPage /> },
+      { path: 'orders/:id', element: <OrderDetailsPage /> },
+      { path: 'orders/:id/tracking', element: <OrderTrackingPage /> },
+      { path: 'admin', element: <AdminPage /> },
       { path: '*', element: <CategoryPage /> },
     ],
   },
@@ -34,11 +43,13 @@ const router = createBrowserRouter([
 
 export default function App() {
   return (
-    <CartProvider>
-      <Suspense fallback={<PageSkeleton />}>
-        <RouterProvider router={router} />
-      </Suspense>
-      <ToastManager />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Suspense fallback={<PageSkeleton />}>
+          <RouterProvider router={router} />
+        </Suspense>
+        <ToastManager />
+      </CartProvider>
+    </AuthProvider>
   )
 }

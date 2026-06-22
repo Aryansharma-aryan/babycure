@@ -5,12 +5,14 @@ import PageHeader from '../components/PageHeader'
 import { useCart } from '../hooks/useCart'
 
 export default function CartPage() {
-  const { items } = useCart()
+  const { items, loading } = useCart()
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8">
       <PageHeader eyebrow="Cart" title="Your Cart" copy="Review products, quantity and delivery savings before checkout." backTo="/category" backLabel="Continue shopping" />
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="rounded-md border border-slate-200 bg-white p-8 text-center font-black text-brand-blue shadow-soft">Loading your cart...</div>
+      ) : items.length === 0 ? (
         <EmptyCart />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
