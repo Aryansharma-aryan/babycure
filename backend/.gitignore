@@ -5,4 +5,5 @@ dist/
 .env.*.local
 npm-debug.log*
 nodemon.*.log
+*.log
 coverage/

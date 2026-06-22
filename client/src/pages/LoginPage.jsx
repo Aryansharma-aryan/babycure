@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [otpHint, setOtpHint] = useState('')
   const [resetEmail, setResetEmail] = useState('')
   const [resetOtpSent, setResetOtpSent] = useState(false)
-  const [resetOtpHint, setResetOtpHint] = useState('')
   const [pending, setPending] = useState(false)
   const navigate = useNavigate()
   const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
@@ -118,8 +117,7 @@ export default function LoginPage() {
 
     setPending(true)
     try {
-      const response = await sendPasswordResetOtp({ email: resetEmail })
-      setResetOtpHint(response.devOtp || '')
+      await sendPasswordResetOtp({ email: resetEmail })
       setResetOtpSent(true)
     } catch (error) {
       toast.error(error.message)
@@ -154,7 +152,6 @@ export default function LoginPage() {
       setMode('login')
       setResetEmail('')
       setResetOtpSent(false)
-      setResetOtpHint('')
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -263,7 +260,7 @@ export default function LoginPage() {
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm font-bold">
                     <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" className="accent-brand-blue" /> Remember me</label>
-                    <button type="button" className="text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('forgot'); setResetEmail(''); setResetOtpSent(false); setResetOtpHint('') }}>Forgot password?</button>
+                    <button type="button" className="text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('forgot'); setResetEmail(''); setResetOtpSent(false) }}>Forgot password?</button>
                   </div>
                   <Button type="submit" className="mt-7 w-full" disabled={pending}>
                     {pending ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
@@ -286,11 +283,6 @@ export default function LoginPage() {
                   />
                   {resetOtpSent && (
                     <div className="mt-4 space-y-4">
-                      {resetOtpHint && (
-                        <div className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-black text-brand-green">
-                          Development OTP: <span className="font-display text-lg text-slate-950">{resetOtpHint}</span>
-                        </div>
-                      )}
                       <Input label="Email OTP" name="otp" inputMode="numeric" maxLength="6" placeholder="123456" autoComplete="one-time-code" />
                       <Input label="New Password" name="password" type="password" placeholder="At least 8 characters" autoComplete="new-password" />
                       <Input label="Confirm Password" name="confirmPassword" type="password" placeholder="Confirm new password" autoComplete="new-password" />
@@ -299,7 +291,7 @@ export default function LoginPage() {
                   <Button type="submit" variant="green" className="mt-7 w-full" disabled={pending}>
                     {pending ? 'Please wait...' : resetOtpSent ? 'Verify OTP & Reset Password' : 'Send Reset OTP'}
                   </Button>
-                  <button type="button" className="mt-4 text-sm font-black text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('email'); setResetEmail(''); setResetOtpSent(false); setResetOtpHint('') }}>
+                  <button type="button" className="mt-4 text-sm font-black text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('email'); setResetEmail(''); setResetOtpSent(false) }}>
                     Back to login
                   </button>
                 </form>

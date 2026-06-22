@@ -52,6 +52,17 @@ export default function CategoryPage() {
   }, [])
 
   useEffect(() => {
+    if (!filtersOpen) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [filtersOpen])
+
+  useEffect(() => {
     let active = true
     setLoading(true)
     productService
@@ -121,9 +132,9 @@ export default function CategoryPage() {
         </div>
       </div>
       {filtersOpen && (
-        <div className="baby-drawer-backdrop fixed inset-0 z-[80] lg:hidden">
+        <div className="baby-drawer-backdrop fixed inset-0 z-[80] h-dvh overflow-hidden lg:hidden">
           <button type="button" aria-label="Close filters" className="absolute inset-0 bg-slate-950/40" onClick={() => setFiltersOpen(false)} />
-          <div className="baby-drawer-panel absolute bottom-3 right-3 top-3 flex w-[min(92vw,390px)] flex-col overflow-hidden rounded-[1.6rem] border border-sky-100 bg-white shadow-[0_30px_90px_rgba(23,50,77,0.22)]">
+          <div className="baby-drawer-panel fixed inset-y-0 right-0 flex h-dvh w-[min(92vw,410px)] flex-col overflow-hidden rounded-l-[1.6rem] border-l border-sky-100 bg-white shadow-[0_30px_90px_rgba(23,50,77,0.22)]">
             <div className="flex items-center justify-between border-b border-sky-100 bg-white px-5 py-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>

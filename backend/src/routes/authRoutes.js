@@ -22,6 +22,8 @@ router.post('/send-phone-otp', sendPhoneOtpLimiter, sendPhoneOtp)
 router.post('/verify-phone-otp', verifyPhoneOtp)
 router.post('/password/forgot', sendPasswordResetOtpLimiter, sendPasswordResetOtp)
 router.post('/password/reset', resetPasswordWithOtp)
+router.post('/forgot-password', sendPasswordResetOtpLimiter, sendPasswordResetOtp)
+router.post('/reset-password', resetPasswordWithOtp)
 router.get('/me', protect, getMe)
 
 module.exports = router

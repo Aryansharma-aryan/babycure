@@ -41,13 +41,10 @@ const otpSchema = new mongoose.Schema(
   },
 )
 
-otpSchema.pre('validate', function requireOtpTarget(next) {
+otpSchema.pre('validate', function requireOtpTarget() {
   if (!this.phone && !this.email) {
-    next(new Error('OTP requires phone or email.'))
-    return
+    this.invalidate('email', 'OTP requires phone or email.')
   }
-
-  next()
 })
 
 const Otp = mongoose.model('Otp', otpSchema)

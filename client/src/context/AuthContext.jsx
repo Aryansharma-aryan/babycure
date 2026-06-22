@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
 
   const sendPasswordResetOtp = useCallback(async (payload) => {
     const response = await authService.sendPasswordResetOtp(payload)
-    toast.success('Password reset OTP sent to your email')
+    toast.success('Password reset OTP sent to your registered email')
     return response
   }, [])
 

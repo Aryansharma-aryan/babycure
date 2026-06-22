@@ -247,31 +247,45 @@ const sendPasswordResetOtp = asyncHandler(async (req, res) => {
     purpose: 'password_reset',
   })
 
-  await sendEmail({
-    to: normalizedEmail,
-    subject: 'Your BabyCure password reset OTP',
-    text: `Your BabyCure password reset OTP is ${otp}. It is valid for 5 minutes. If you did not request this, please ignore this email.`,
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#17324D;padding:20px">
-        <h2 style="color:#4AA6D9;margin:0 0 12px">BabyCure password reset</h2>
-        <p>Hello ${user.name || 'there'},</p>
-        <p>Use this OTP to reset your BabyCure account password:</p>
-        <div style="display:inline-block;background:#F5FFF3;border:1px solid #D7F5D3;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:800;letter-spacing:6px;color:#7CC576">${otp}</div>
-        <p>This OTP is valid for 5 minutes. If you did not request this, you can safely ignore this email.</p>
-      </div>
-    `,
-  })
+  try {
+    const emailResult = await sendEmail({
+      to: normalizedEmail,
+      subject: 'Your BabyCure password reset OTP',
+      text: `Your BabyCure password reset OTP is ${otp}. It is valid for 5 minutes. If you did not request this, please ignore this email.`,
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#17324D;padding:20px">
+          <h2 style="color:#4AA6D9;margin:0 0 12px">BabyCure password reset</h2>
+          <p>Hello ${user.name || 'there'},</p>
+          <p>Use this OTP to reset your BabyCure account password:</p>
+          <div style="display:inline-block;background:#F5FFF3;border:1px solid #D7F5D3;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:800;letter-spacing:6px;color:#7CC576">${otp}</div>
+          <p>This OTP is valid for 5 minutes. If you did not request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    })
 
-  const isDevelopment = process.env.NODE_ENV === 'development'
+    if (emailResult?.skipped) {
+      await Otp.deleteMany({
+        email: normalizedEmail,
+        purpose: 'password_reset',
+      })
+      throw new AppError('Email service is not configured. Please set SMTP credentials.', 503)
+    }
+  } catch (error) {
+    await Otp.deleteMany({
+      email: normalizedEmail,
+      purpose: 'password_reset',
+    })
 
-  if (isDevelopment) {
-    console.log(`BabyCure password reset OTP for ${normalizedEmail}: ${otp}`)
+    if (error instanceof AppError) {
+      throw error
+    }
+
+    throw new AppError('Unable to send password reset OTP. Please try again later.', 502)
   }
 
   res.status(200).json({
     success: true,
     message: 'Password reset OTP sent successfully.',
-    ...(isDevelopment ? { devOtp: otp } : {}),
   })
 })
 

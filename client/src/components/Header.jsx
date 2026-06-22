@@ -1,5 +1,5 @@
 import { ChevronDown, CircleUserRound, Heart, Menu, PackageCheck, Search, ShoppingCart, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { categories } from '../data/products'
 import { useAuth } from '../hooks/useAuth'
@@ -24,6 +24,17 @@ export default function Header() {
   const navLinks = user?.role === 'admin'
     ? [...publicNavLinks.slice(0, 4), { label: 'Admin', to: '/admin' }, ...publicNavLinks.slice(4)]
     : publicNavLinks
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [menuOpen])
 
   return (
     <header className="sticky top-0 z-50 border-b border-sky-100/80 bg-white/78 shadow-[0_14px_45px_rgba(74,166,217,0.10)] backdrop-blur-2xl">
@@ -81,9 +92,9 @@ export default function Header() {
         ))}
       </nav>
       {menuOpen && (
-        <div className="baby-drawer-backdrop fixed inset-0 z-[70] bg-brand-ink/35 lg:hidden">
+        <div className="baby-drawer-backdrop fixed inset-0 z-[70] h-dvh overflow-hidden bg-brand-ink/35 lg:hidden">
           <button type="button" className="absolute inset-0 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-          <nav className="baby-drawer-panel absolute bottom-3 right-3 top-3 flex w-[min(90vw,390px)] flex-col overflow-hidden rounded-[1.6rem] border border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)]">
+          <nav className="baby-drawer-panel fixed inset-y-0 right-0 flex h-dvh w-[min(92vw,410px)] flex-col overflow-hidden rounded-l-[1.6rem] border-l border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)]">
           <div className="flex items-center justify-between border-b border-sky-100 bg-white px-4 py-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>
