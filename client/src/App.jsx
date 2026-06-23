@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import Layout from './components/Layout'
+import AppSplash from './components/AppSplash'
 import { PageSkeleton } from './components/Skeleton'
 import ToastManager from './components/ToastManager'
 
@@ -44,9 +45,21 @@ const router = createBrowserRouter([
 ])
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem('babycure:splash-seen'))
+
+  useEffect(() => {
+    if (!showSplash) return undefined
+    const timer = window.setTimeout(() => {
+      sessionStorage.setItem('babycure:splash-seen', 'true')
+      setShowSplash(false)
+    }, 2000)
+    return () => window.clearTimeout(timer)
+  }, [showSplash])
+
   return (
     <AuthProvider>
       <CartProvider>
+        {showSplash && <AppSplash />}
         <Suspense fallback={<PageSkeleton />}>
           <RouterProvider router={router} />
         </Suspense>

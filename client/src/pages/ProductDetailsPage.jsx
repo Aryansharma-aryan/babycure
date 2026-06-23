@@ -1,7 +1,7 @@
 import { BadgeCheck, Heart, Minus, Plus, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { productService, wishlistService } from '../api/services'
 import Button from '../components/Button'
 import FeatureCard from '../components/FeatureCard'
@@ -17,6 +17,7 @@ import { getProductImage } from '../utils/products'
 
 export default function ProductDetailsPage() {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const { addToCart } = useCart()
   const { isAuthenticated } = useAuth()
@@ -43,6 +44,13 @@ export default function ProductDetailsPage() {
       active = false
     }
   }, [id])
+
+  useEffect(() => {
+    if (loading || location.hash !== '#reviews') return
+    window.setTimeout(() => {
+      document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }, [loading, location.hash])
 
   const images = useMemo(() => product?.images || [], [product])
 
@@ -164,7 +172,7 @@ function Reviews({ product, reviews, setReviews, canReview }) {
   }
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[380px_1fr]">
+    <div id="reviews" className="mt-8 scroll-mt-32 grid gap-6 lg:grid-cols-[380px_1fr]">
       <form onSubmit={submitReview} className="rounded-md border border-blue-100 bg-white p-6 shadow-[0_18px_55px_rgba(7,87,168,0.08)]">
         <h3 className="font-display text-2xl font-black text-slate-950">Write a review</h3>
         <div className="mt-4 flex gap-1">

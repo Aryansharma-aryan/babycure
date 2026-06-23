@@ -117,6 +117,24 @@ img {
   background: #ffffff;
 }
 
+.baby-splash {
+  animation: baby-splash-out 220ms ease 1.78s both;
+}
+
+.baby-splash img {
+  animation: baby-splash-logo 900ms ease-out both;
+}
+
+.order-confetti {
+  position: absolute;
+  top: -1.5rem;
+  width: 0.7rem;
+  height: 1rem;
+  border-radius: 0.15rem;
+  opacity: 0.95;
+  animation: order-confetti-fall 1.5s ease-in forwards;
+}
+
 @keyframes baby-offer-marquee {
   from {
     transform: translateX(0);
@@ -146,6 +164,41 @@ img {
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes baby-splash-logo {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes baby-splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes order-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -1.5rem, 0) rotate(0deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(2.4rem, 105vh, 0) rotate(720deg);
   }
 }
 
@@ -180,6 +233,10 @@ img {
 @media (prefers-reduced-motion: reduce) {
   .baby-offer-track {
     animation-duration: 70s;
+  }
+
+  .order-confetti {
+    display: none;
   }
 }
 

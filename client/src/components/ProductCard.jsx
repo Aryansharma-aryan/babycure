@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart } from 'lucide-react'
+import { Heart, MessageSquareText, ShoppingCart } from 'lucide-react'
 import { memo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
@@ -74,7 +74,14 @@ function ProductCard({ product }) {
           <p className="text-lg font-black text-brand-ink">{formatPrice(product.price)}</p>
           <p className="text-xs font-bold text-slate-400 line-through">{formatPrice(mrp)}</p>
         </div>
-        <Rating rating={rating} reviews={reviews} />
+        <Link to={`/product/${productId}#reviews`} className="rounded-full px-2 py-1 transition hover:bg-amber-50" aria-label={`Read or write reviews for ${product.name}`}>
+          <Rating rating={rating} reviews={reviews} />
+        </Link>
+      </div>
+      <div className="px-4 pt-3">
+        <Link to={`/product/${productId}#reviews`} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-4 py-2.5 text-sm font-black text-amber-700 transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-100">
+          <MessageSquareText className="h-4 w-4" /> Rate & Review
+        </Link>
       </div>
       <div className="grid grid-cols-[1fr_46px] gap-2 p-4">
         <button

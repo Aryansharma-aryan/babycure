@@ -1,8 +1,8 @@
-import { CreditCard, LockKeyhole, MapPin, PackageCheck, Plus, ShieldCheck } from 'lucide-react'
+import { CheckCircle2, CreditCard, LockKeyhole, MapPin, PackageCheck, Plus, ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
-import { addressService, couponService, orderService, paymentService } from '../api/services'
+import { addressService, couponService, paymentService } from '../api/services'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import OrderSummary from '../components/OrderSummary'
@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState(null)
   const [pending, setPending] = useState(false)
   const [showAddressForm, setShowAddressForm] = useState(false)
+  const [successOrderId, setSuccessOrderId] = useState('')
 
   const payable = useMemo(() => coupon?.payableAmount ?? totals.total, [coupon, totals.total])
 
@@ -80,29 +81,33 @@ export default function CheckoutPage() {
     }
   }
 
-  const openRazorpay = async (order) => {
+  const openRazorpay = async (checkoutPayload) => {
     const loaded = await loadRazorpay()
     if (!loaded) {
       toast.error('Razorpay could not load')
       return false
     }
 
-    const payment = await paymentService.createRazorpayOrder(order._id)
+    const payment = await paymentService.createRazorpayOrder(checkoutPayload)
     const options = {
       key: payment.key || import.meta.env.VITE_RAZORPAY_KEY_ID,
       amount: payment.razorpayOrder.amount,
       currency: payment.razorpayOrder.currency,
       name: 'BabyCure',
-      description: `Order ${order.orderNumber}`,
+      description: 'BabyCure checkout',
       order_id: payment.razorpayOrder.id,
       handler: async (response) => {
         try {
-          await paymentService.verifyRazorpayPayment({ orderId: order._id, ...response })
+          const verified = await paymentService.verifyRazorpayPayment(response)
           await syncCart()
-          toast.success('Payment successful')
-          navigate(`/orders/${order._id}`)
+          const orderId = verified.order._id
+          setPending(false)
+          setSuccessOrderId(orderId)
+          toast.success('Congratulations! Order placed successfully')
+          window.setTimeout(() => navigate(`/orders/${orderId}`), 2200)
         } catch (error) {
           toast.error(error.message)
+          setPending(false)
         }
       },
       modal: {
@@ -122,18 +127,16 @@ export default function CheckoutPage() {
     if (!selectedAddress) return toast.error('Please select or add an address')
     setPending(true)
     try {
-      const response = await orderService.create({
+      const checkoutPayload = {
         shippingAddress: selectedAddress,
-        paymentMethod,
         couponCode: coupon?.coupon?.code || couponCode || undefined,
-      })
-      toast.success('Order created. Complete payment.')
+      }
       if (paymentMethod === 'ONLINE') {
-        const opened = await openRazorpay(response.order)
+        const opened = await openRazorpay(checkoutPayload)
         if (opened) return
       } else {
         await syncCart()
-        navigate(`/orders/${response.order._id}`)
+        toast.error('COD is not available')
       }
     } catch (error) {
       toast.error(error.message)
@@ -144,6 +147,7 @@ export default function CheckoutPage() {
 
   return (
     <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
+      {successOrderId && <OrderSuccessBlast />}
       <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to cart" />
       <CheckoutSteps />
       <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
@@ -193,6 +197,54 @@ export default function CheckoutPage() {
         <OrderSummary />
       </div>
     </section>
+  )
+}
+
+function OrderSuccessBlast() {
+  const confetti = useMemo(
+    () => Array.from({ length: 42 }, (_, index) => ({
+      id: index,
+      left: `${(index * 29) % 100}%`,
+      delay: `${(index % 9) * 0.08}s`,
+      duration: `${1.2 + (index % 5) * 0.16}s`,
+      color: ['#4aa6d9', '#70c96a', '#ffd166', '#ff6b6b', '#0757a8'][index % 5],
+      rotate: `${(index * 37) % 180}deg`,
+    })),
+    [],
+  )
+
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center overflow-hidden bg-white/88 px-4 text-center backdrop-blur-sm">
+      <div className="pointer-events-none absolute inset-0">
+        {confetti.map((piece) => (
+          <span
+            key={piece.id}
+            className="order-confetti"
+            style={{
+              left: piece.left,
+              animationDelay: piece.delay,
+              animationDuration: piece.duration,
+              backgroundColor: piece.color,
+              transform: `rotate(${piece.rotate})`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="relative w-full max-w-md rounded-md border border-green-100 bg-white p-7 shadow-[0_24px_70px_rgba(74,166,217,0.22)] sm:p-9">
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-green-50 text-brand-green">
+          <CheckCircle2 className="h-11 w-11" />
+        </div>
+        <div className="mt-5 flex items-center justify-center gap-2 text-brand-blue">
+          <Sparkles className="h-5 w-5" />
+          <span className="text-sm font-black uppercase tracking-[0.16em]">Payment done</span>
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <h2 className="mt-3 font-display text-3xl font-black text-brand-ink sm:text-4xl">Congratulations!</h2>
+        <p className="mt-3 text-base font-bold leading-7 text-slate-600">
+          Your BabyCure order has been placed successfully.
+        </p>
+      </div>
+    </div>
   )
 }
 

@@ -54,6 +54,10 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new AppError('COD is not available. Please use online payment.', 400)
   }
 
+  if (paymentMethod === 'ONLINE') {
+    throw new AppError('Please complete Razorpay payment first. Your order will be placed after payment succeeds.', 400)
+  }
+
   const session = await mongoose.startSession()
 
   try {

@@ -1,10 +1,10 @@
 import { ChevronDown, Gift, SlidersHorizontal, Sparkles } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { categoryService, productService } from '../api/services'
 import ProductCard from '../components/ProductCard'
-import { ProductGridSkeleton } from '../components/Skeleton'
+import { BabyCureLoader, ProductGridSkeleton } from '../components/Skeleton'
 import { useDebounce } from '../hooks/useDebounce'
 
 const sortOptions = [
@@ -20,8 +20,10 @@ export default function CategoryPage() {
   const [products, setProducts] = useState([])
   const [meta, setMeta] = useState({ total: 0, page: 1, pages: 1 })
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [search, setSearch] = useState(params.get('search') || '')
+  const loadMoreRef = useRef(null)
   const debouncedSearch = useDebounce(search)
 
   const filters = useMemo(
@@ -31,7 +33,6 @@ export default function CategoryPage() {
       minPrice: params.get('minPrice') || '',
       maxPrice: params.get('maxPrice') || '',
       sort: params.get('sort') || '-createdAt',
-      page: Number(params.get('page') || 1),
       limit: 12,
     }),
     [debouncedSearch, params],
@@ -42,7 +43,6 @@ export default function CategoryPage() {
       const next = new URLSearchParams(current)
       if (value) next.set(key, value)
       else next.delete(key)
-      if (key !== 'page') next.set('page', '1')
       return next
     })
   }, [setParams])
@@ -66,7 +66,7 @@ export default function CategoryPage() {
     let active = true
     setLoading(true)
     productService
-      .list(filters)
+      .list({ ...filters, page: 1 })
       .then((response) => {
         if (!active) return
         setProducts(response.products || [])
@@ -78,6 +78,38 @@ export default function CategoryPage() {
       active = false
     }
   }, [filters])
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || meta.page >= meta.pages) return
+    setLoadingMore(true)
+    try {
+      const nextPage = meta.page + 1
+      const response = await productService.list({ ...filters, page: nextPage })
+      setProducts((current) => [...current, ...(response.products || [])])
+      setMeta({ total: response.total || 0, page: response.page || nextPage, pages: response.pages || 1 })
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [filters, loading, loadingMore, meta.page, meta.pages])
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target) return undefined
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore()
+        }
+      },
+      { rootMargin: '500px 0px' },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   return (
     <section className="bg-white pb-10">
@@ -111,24 +143,25 @@ export default function CategoryPage() {
             </button>
           </div>
           {loading ? (
-            <ProductGridSkeleton />
+            <BabyCureLoader label="Loading baby care products..." />
           ) : products.length === 0 ? (
             <div className="rounded-md border border-blue-100 bg-white p-10 text-center shadow-[0_18px_55px_rgba(7,87,168,0.08)]">
               <h2 className="font-display text-2xl font-black text-slate-950">No products found</h2>
               <p className="mt-2 font-semibold text-slate-500">Try a different category, price range, or search term.</p>
             </div>
           ) : (
-            <div className="grid gap-x-10 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
-              {products.map((product) => <ProductCard key={product._id} product={product} />)}
-            </div>
+            <>
+              <div className="grid gap-x-10 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
+                {products.map((product) => <ProductCard key={product._id} product={product} />)}
+              </div>
+              <div ref={loadMoreRef} className="mt-8 min-h-16">
+                {loadingMore && <ProductGridSkeleton count={3} />}
+                {!loadingMore && meta.page >= meta.pages && products.length > 0 && (
+                  <p className="rounded-full bg-sky-50 px-5 py-3 text-center text-sm font-black text-brand-blue">You have reached the end</p>
+                )}
+              </div>
+            </>
           )}
-          <div className="mt-8 flex items-center justify-center gap-2">
-            {Array.from({ length: meta.pages }, (_, index) => index + 1).slice(0, 6).map((page) => (
-              <button key={page} type="button" onClick={() => updateParam('page', String(page))} className={`h-10 min-w-10 rounded-full px-3 text-sm font-black ${meta.page === page ? 'bg-brand-blue text-white' : 'border border-blue-100 bg-white text-brand-blue'}`}>
-                {page}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
       {filtersOpen && (

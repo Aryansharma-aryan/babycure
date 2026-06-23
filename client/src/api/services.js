@@ -65,7 +65,7 @@ export const shiprocketService = {
 }
 
 export const paymentService = {
-  createRazorpayOrder: (orderId) => api.post('/payments/razorpay/order', { orderId }),
+  createRazorpayOrder: (payload) => api.post('/payments/razorpay/order', payload),
   verifyRazorpayPayment: (payload) => api.post('/payments/razorpay/verify', payload),
 }
 
@@ -84,8 +84,15 @@ export const couponService = {
   remove: (id) => api.delete(`/coupons/${id}`),
 }
 
+export const contactService = {
+  create: (payload) => api.post('/contact', payload),
+}
+
 export const adminService = {
   dashboard: () => api.get('/admin/dashboard'),
+  contactInquiries: () => api.get('/admin/contact-inquiries'),
+  updateContactInquiry: (id, payload) => api.patch(`/admin/contact-inquiries/${id}`, payload),
+  deleteContactInquiry: (id) => api.delete(`/admin/contact-inquiries/${id}`),
   users: () => api.get('/admin/users'),
   updateUser: (id, payload) => api.patch(`/admin/users/${id}`, payload),
 }

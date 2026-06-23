@@ -4,6 +4,7 @@ import {
   Download,
   Edit3,
   ExternalLink,
+  MessageSquareText,
   PackageCheck,
   Plus,
   RefreshCw,
@@ -27,7 +28,6 @@ import {
 } from '../api/services'
 import Button from '../components/Button'
 import Input from '../components/Input'
-import PageHeader from '../components/PageHeader'
 import { PageSkeleton } from '../components/Skeleton'
 import { useAuth } from '../hooks/useAuth'
 import { formatPrice } from '../utils/format'
@@ -41,11 +41,13 @@ const tabs = [
   ['orders', PackageCheck, 'Orders'],
   ['coupons', ShieldCheck, 'Coupons'],
   ['users', Users, 'Users'],
+  ['inquiries', MessageSquareText, 'Inquiries'],
   ['reviews', Star, 'Reviews'],
 ]
 
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
 const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -68,17 +70,27 @@ export default function AdminPage() {
   if (authLoading || !isAuthenticated || user?.role !== 'admin') return <PageSkeleton />
 
   return (
-    <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
-      <PageHeader eyebrow="Admin CRM" title="BabyCure Control Center" copy="Manage products, orders, shipment tracking, coupons, users, reviews and analytics." backTo="/" backLabel="Back to store" />
-      <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
-        <aside className="h-max rounded-[1.1rem] border border-sky-100 bg-white p-2 shadow-soft sm:rounded-[1.6rem] sm:p-3 lg:sticky lg:top-36">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:block lg:min-w-0">
+    <section className="mx-auto max-w-[1440px] px-3 py-4 sm:px-4 sm:py-6">
+      <div className="mb-4 rounded-md border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">Admin CRM</p>
+            <h1 className="mt-1 font-display text-2xl font-black text-brand-ink sm:text-3xl">BabyCure Control Center</h1>
+            <p className="mt-1 max-w-2xl text-sm font-semibold text-slate-500">Manage orders, Shiprocket, products, coupons, customers, reviews and inquiries from one fast workspace.</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/')}>Back to Store</Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[230px_1fr]">
+        <aside className="h-max rounded-md border border-sky-100 bg-brand-ink p-2 shadow-sm lg:sticky lg:top-28">
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:block lg:min-w-0">
           {tabs.map(([key, Icon, label]) => (
             <button
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`flex min-w-0 items-center gap-2 rounded-xl px-3 py-3 text-left text-xs font-extrabold transition sm:gap-3 sm:rounded-2xl sm:px-4 sm:text-sm lg:mb-2 lg:w-full ${activeTab === key ? 'bg-brand-mist text-brand-blue shadow-[0_12px_32px_rgba(74,166,217,0.12)]' : 'text-slate-500 hover:bg-sky-50 hover:text-brand-blue'}`}
+              className={`flex min-w-0 items-center gap-2 rounded px-3 py-2.5 text-left text-xs font-extrabold transition sm:text-sm lg:mb-1 lg:w-full ${activeTab === key ? 'bg-brand-green text-brand-ink' : 'text-sky-100 hover:bg-white/10 hover:text-white'}`}
             >
               <Icon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" /> <span className="truncate">{label}</span>
             </button>
@@ -92,6 +104,7 @@ export default function AdminPage() {
           {activeTab === 'orders' && <OrdersPanel />}
           {activeTab === 'coupons' && <CouponsPanel />}
           {activeTab === 'users' && <UsersPanel />}
+          {activeTab === 'inquiries' && <InquiriesPanel />}
           {activeTab === 'reviews' && <ReviewsPanel />}
         </div>
       </div>
@@ -101,9 +114,9 @@ export default function AdminPage() {
 
 function Panel({ title, action, children }) {
   return (
-    <div className="rounded-[1.1rem] border border-sky-100 bg-white p-4 shadow-soft sm:rounded-[1.8rem] sm:p-5">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-extrabold text-brand-ink">{title}</h2>
+    <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <h2 className="font-display text-xl font-black text-brand-ink">{title}</h2>
         {action}
       </div>
       {children}
@@ -133,6 +146,8 @@ function DashboardPanel() {
   if (loading) return <PageSkeleton />
 
   const stats = data?.stats || {}
+  const monthlySales = data?.monthlySales || []
+  const topProducts = data?.topSellingProducts || []
   const cards = [
     ['Users', stats.usersCount || 0, Users],
     ['Orders', stats.ordersCount || 0, PackageCheck],
@@ -147,13 +162,24 @@ function DashboardPanel() {
       <div className="flex justify-end"><Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button></div>
       <div className="grid gap-4 md:grid-cols-3">
         {cards.map(([label, value, Icon]) => (
-          <div key={label} className="rounded-[1.5rem] border border-sky-100 bg-gradient-to-br from-white to-brand-mist p-5 shadow-[0_18px_55px_rgba(74,166,217,0.10)]">
-            <Icon className="h-7 w-7 text-brand-blue" />
-            <p className="mt-4 text-sm font-bold text-slate-500">{label}</p>
-            <p className="mt-1 font-display text-3xl font-extrabold text-brand-ink">{value}</p>
+          <div key={label} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                <p className="mt-2 font-display text-2xl font-black text-brand-ink">{value}</p>
+              </div>
+              <span className="grid h-10 w-10 place-items-center rounded bg-brand-mist text-brand-blue">
+                <Icon className="h-5 w-5" />
+              </span>
+            </div>
           </div>
         ))}
       </div>
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <DashboardDonut stats={stats} />
+        <MonthlySalesChart sales={monthlySales} />
+      </div>
+      <TopProductsChart products={topProducts} />
       <Panel title="Recent Orders">
         <Table headers={['Order', 'User', 'Total', 'Payment', 'Status']}>
           {(data?.recentOrders || []).map((order) => (
@@ -178,6 +204,123 @@ function DashboardPanel() {
           ))}
         </Table>
       </Panel>
+    </div>
+  )
+}
+
+function DashboardDonut({ stats }) {
+  const paid = stats.paidOrders || 0
+  const pending = stats.pendingOrders || 0
+  const total = Math.max(stats.ordersCount || 0, paid + pending, 1)
+  const paidPercent = Math.round((paid / total) * 100)
+  const pendingPercent = Math.round((pending / total) * 100)
+  const circumference = 2 * Math.PI * 44
+
+  return (
+    <Panel title="Order Mix">
+      <div className="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
+        <div className="relative mx-auto h-44 w-44">
+          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+            <circle cx="60" cy="60" r="44" fill="none" stroke="#e5e7eb" strokeWidth="18" />
+            <circle
+              cx="60"
+              cy="60"
+              r="44"
+              fill="none"
+              stroke="#4aa6d9"
+              strokeWidth="18"
+              strokeLinecap="round"
+              strokeDasharray={`${(paid / total) * circumference} ${circumference}`}
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="44"
+              fill="none"
+              stroke="#7cc576"
+              strokeWidth="18"
+              strokeLinecap="round"
+              strokeDasharray={`${(pending / total) * circumference} ${circumference}`}
+              strokeDashoffset={-((paid / total) * circumference)}
+            />
+          </svg>
+          <div className="absolute inset-0 grid place-items-center text-center">
+            <div>
+              <p className="font-display text-3xl font-black text-brand-ink">{stats.ordersCount || 0}</p>
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Orders</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3">
+          <ChartLegend color="bg-brand-blue" label="Paid Orders" value={`${paid} (${paidPercent}%)`} />
+          <ChartLegend color="bg-brand-green" label="Pending / Processing" value={`${pending} (${pendingPercent}%)`} />
+          <ChartLegend color="bg-slate-200" label="Other Statuses" value={Math.max((stats.ordersCount || 0) - paid - pending, 0)} />
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+function MonthlySalesChart({ sales }) {
+  const maxRevenue = Math.max(...sales.map((item) => item.revenue || 0), 1)
+
+  return (
+    <Panel title="Monthly Revenue">
+      <div className="flex h-64 items-end gap-3 overflow-hidden rounded bg-brand-mist p-4">
+        {sales.length === 0 ? (
+          <div className="grid h-full w-full place-items-center text-sm font-bold text-slate-500">No paid sales yet</div>
+        ) : (
+          sales.map((item) => {
+            const height = Math.max(((item.revenue || 0) / maxRevenue) * 100, 8)
+            const month = monthNames[(item._id?.month || 1) - 1]
+            return (
+              <div key={`${item._id?.year}-${item._id?.month}`} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2">
+                <div className="w-full rounded-t bg-brand-blue" style={{ height: `${height}%` }} title={`${month}: ${formatPrice(item.revenue || 0)}`} />
+                <p className="text-xs font-black text-slate-500">{month}</p>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+function TopProductsChart({ products }) {
+  const maxSold = Math.max(...products.map((item) => item.quantitySold || 0), 1)
+
+  return (
+    <Panel title="Top Product Performance">
+      <div className="grid gap-3">
+        {products.length === 0 ? (
+          <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No product sales yet.</p>
+        ) : (
+          products.slice(0, 6).map((item) => {
+            const width = Math.max(((item.quantitySold || 0) / maxSold) * 100, 8)
+            return (
+              <div key={item._id || item.name} className="grid gap-2 sm:grid-cols-[180px_1fr_110px] sm:items-center">
+                <p className="truncate text-sm font-extrabold text-slate-800">{item.name}</p>
+                <div className="h-3 overflow-hidden rounded bg-brand-mist">
+                  <div className="h-full rounded bg-brand-green" style={{ width: `${width}%` }} />
+                </div>
+                <p className="text-sm font-black text-slate-700 sm:text-right">{item.quantitySold || 0} sold</p>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+function ChartLegend({ color, label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded bg-brand-mist px-4 py-3">
+      <span className="flex min-w-0 items-center gap-3 text-sm font-bold text-slate-600">
+        <span className={`h-3 w-3 shrink-0 rounded-full ${color}`} />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="text-sm font-black text-brand-ink">{value}</span>
     </div>
   )
 }
@@ -279,7 +422,7 @@ function ProductsPanel() {
         <Table headers={['Image', 'Product', 'Category', 'Price', 'Stock', 'Actions']}>
           {products.map((product) => (
             <tr key={product._id}>
-              <Td>{getProductImage(product) && <img src={getProductImage(product)} alt={product.name} className="h-12 w-12 rounded-xl object-cover" />}</Td>
+              <Td>{getProductImage(product) && <img src={getProductImage(product)} alt={product.name} className="h-12 w-12 rounded object-cover" />}</Td>
               <Td>{product.name}</Td>
               <Td>{product.category?.name}</Td>
               <Td>{formatPrice(product.price)}</Td>
@@ -473,7 +616,7 @@ function OrdersPanel() {
               <Td>{order.user?.name || order.user?.email || order.user?.phone || 'Customer'}</Td>
               <Td>{formatPrice(order.totalPrice)}</Td>
               <Td>
-                <select value={order.orderStatus} onChange={(event) => updateStatus(order, event.target.value)} className="rounded-xl border border-sky-100 px-3 py-2 text-xs font-bold">
+                <select value={order.orderStatus} onChange={(event) => updateStatus(order, event.target.value)} className="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">
                   {orderStatuses.map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}
                 </select>
               </Td>
@@ -606,19 +749,19 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
           <DetailLine label="Label URL" value={order.labelUrl || 'Not generated'} />
           <DetailLine label="Estimated Delivery" value={order.estimatedDeliveryDate ? formatDate(order.estimatedDeliveryDate) : 'Not assigned'} />
           {order.trackingUrl && (
-            <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand-blue px-4 py-2 text-sm font-extrabold text-white">
+            <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded bg-brand-blue px-4 py-2 text-sm font-extrabold text-white">
               Track on Courier Website <ExternalLink className="h-4 w-4" />
             </a>
           )}
         </AdminInfoCard>
       </div>
 
-      <div className="mt-5 rounded-[1.1rem] border border-sky-100 bg-sky-50/40 p-3 sm:rounded-[1.4rem] sm:p-4">
-        <h3 className="font-display text-xl font-extrabold text-brand-ink">Ordered Products</h3>
+      <div className="mt-5 rounded-md border border-sky-100 bg-brand-mist p-3 sm:p-4">
+        <h3 className="font-display text-xl font-black text-brand-ink">Ordered Products</h3>
         <div className="mt-4 overflow-x-auto">
           <table className="mobile-card-table w-full min-w-full text-left text-sm md:min-w-[720px]">
             <thead>
-              <tr className="border-b border-sky-100 text-xs uppercase tracking-[0.12em] text-slate-400">
+              <tr className="border-b border-slate-200 bg-white text-xs uppercase tracking-[0.12em] text-slate-500">
                 <th className="px-3 py-3">Product</th>
                 <th className="px-3 py-3">Product ID</th>
                 <th className="px-3 py-3">Qty</th>
@@ -626,12 +769,12 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
                 <th className="px-3 py-3">Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sky-100">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {(order.orderItems || []).map((item) => (
                 <tr key={`${item.product}-${item.name}`}>
                   <Td>
                     <div className="flex items-center gap-3">
-                      {item.image && <img src={item.image} alt={item.name} className="h-12 w-12 rounded-xl object-cover" />}
+                      {item.image && <img src={item.image} alt={item.name} className="h-12 w-12 rounded object-cover" />}
                       <span>{item.name}</span>
                     </div>
                   </Td>
@@ -646,15 +789,15 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
         </div>
       </div>
 
-      <div className="mt-5 rounded-[1.4rem] border border-sky-100 bg-white p-4">
-        <h3 className="font-display text-xl font-extrabold text-brand-ink">Tracking History</h3>
+      <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
+        <h3 className="font-display text-xl font-black text-brand-ink">Tracking History</h3>
         <div className="mt-4 grid gap-3">
           {(order.trackingHistory || []).length === 0 ? (
-            <p className="rounded-2xl bg-sky-50 p-4 text-sm font-bold text-slate-500">No tracking history yet. Use Update Shipment to add delivery updates.</p>
+            <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No tracking history yet. Use Update Shipment to add delivery updates.</p>
           ) : (
             order.trackingHistory.slice().reverse().map((history, index) => (
-              <div key={`${history.status}-${history.updatedAt}-${index}`} className="rounded-2xl bg-sky-50 p-4">
-                <p className="font-display text-base font-extrabold text-brand-ink">{formatStatus(history.status)}</p>
+              <div key={`${history.status}-${history.updatedAt}-${index}`} className="rounded border border-sky-100 bg-brand-mist p-4">
+                <p className="font-display text-base font-black text-brand-ink">{formatStatus(history.status)}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-600">{history.message}</p>
                 {history.location && <p className="mt-1 text-xs font-extrabold text-brand-blue">{history.location}</p>}
                 <p className="mt-2 text-xs font-bold text-slate-400">{formatDate(history.updatedAt)}</p>
@@ -669,8 +812,8 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
 
 function AdminInfoCard({ title, children }) {
   return (
-    <div className="min-w-0 rounded-[1.1rem] border border-sky-100 bg-white p-4 shadow-[0_16px_48px_rgba(74,166,217,0.08)] sm:rounded-[1.4rem] sm:p-5">
-      <h3 className="mb-4 font-display text-xl font-extrabold text-brand-ink">{title}</h3>
+    <div className="min-w-0 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <h3 className="mb-4 font-display text-lg font-black text-brand-ink">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
   )
@@ -678,9 +821,9 @@ function AdminInfoCard({ title, children }) {
 
 function DetailLine({ label, value, strong = false }) {
   return (
-    <div className="grid gap-1 border-b border-sky-50 pb-2 last:border-0 sm:grid-cols-[140px_1fr]">
+    <div className="grid gap-1 border-b border-slate-100 pb-2 last:border-0 sm:grid-cols-[140px_1fr]">
       <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</span>
-      <span className={`min-w-0 break-words text-sm ${strong ? 'font-display text-lg font-extrabold text-brand-blue' : 'font-semibold text-slate-700'}`}>
+      <span className={`min-w-0 break-words text-sm ${strong ? 'font-display text-lg font-black text-brand-blue' : 'font-semibold text-slate-700'}`}>
         {value || 'Not available'}
       </span>
     </div>
@@ -740,22 +883,27 @@ function CouponsPanel() {
   return (
     <div className="space-y-6">
       <Panel title={editing ? 'Edit Coupon' : 'Add Coupon'}>
+        <div className="mb-5 grid gap-3 rounded-md border border-sky-100 bg-brand-mist p-4 text-sm font-semibold leading-6 text-slate-700 md:grid-cols-3">
+          <p><span className="font-black text-brand-ink">Percentage coupon:</span> Choose Percentage and enter 10 to give 10% off. Example code: SAVE10.</p>
+          <p><span className="font-black text-brand-ink">Fixed coupon:</span> Choose Fixed and enter 100 to give Rs.100 off. Example code: FLAT100.</p>
+          <p><span className="font-black text-brand-ink">How it works:</span> Customer enters this code at checkout. Min order decides eligibility, max discount caps percentage coupons, and usage limit controls total uses.</p>
+        </div>
         <form onSubmit={saveCoupon} className="grid gap-4 md:grid-cols-3">
-          <Input label="Code" name="code" defaultValue={editing?.code || ''} required />
+          <Input label="Code" name="code" placeholder="SAVE10 or FLAT100" defaultValue={editing?.code || ''} required />
           <label className="text-sm font-black text-slate-700">Type
             <select name="discountType" defaultValue={editing?.discountType || 'percentage'} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold">
               <option value="percentage">Percentage</option>
               <option value="fixed">Fixed</option>
             </select>
           </label>
-          <Input label="Discount Value" name="discountValue" type="number" defaultValue={editing?.discountValue || ''} required />
-          <Input label="Min Order" name="minimumOrderAmount" type="number" defaultValue={editing?.minimumOrderAmount || 0} />
-          <Input label="Max Discount" name="maximumDiscountAmount" type="number" defaultValue={editing?.maximumDiscountAmount || ''} />
-          <Input label="Usage Limit" name="usageLimit" type="number" defaultValue={editing?.usageLimit || ''} />
+          <Input label="Discount Value" name="discountValue" type="number" placeholder="10 for 10% or 100 for Rs.100" defaultValue={editing?.discountValue || ''} required />
+          <Input label="Min Order" name="minimumOrderAmount" type="number" placeholder="999 means applies above Rs.999" defaultValue={editing?.minimumOrderAmount || 0} />
+          <Input label="Max Discount" name="maximumDiscountAmount" type="number" placeholder="200 caps percentage discount at Rs.200" defaultValue={editing?.maximumDiscountAmount || ''} />
+          <Input label="Usage Limit" name="usageLimit" type="number" placeholder="100 means first 100 uses only" defaultValue={editing?.usageLimit || ''} />
           <Input label="Start Date" name="startDate" type="date" defaultValue={editing?.startDate?.slice?.(0, 10) || ''} />
           <Input label="Expiry Date" name="expiryDate" type="date" defaultValue={editing?.expiryDate?.slice?.(0, 10) || ''} />
           <label className="flex items-center gap-2 self-end text-sm font-bold text-slate-600"><input name="isActive" type="checkbox" defaultChecked={editing?.isActive !== false} /> Active</label>
-          <Input label="Description" name="description" defaultValue={editing?.description || ''} className="md:col-span-2" />
+          <Input label="Description" name="description" placeholder="Example: 10% off on first baby care order" defaultValue={editing?.description || ''} className="md:col-span-2" />
           <Button type="submit">{editing ? 'Update Coupon' : 'Create Coupon'}</Button>
         </form>
       </Panel>
@@ -811,16 +959,107 @@ function UsersPanel() {
             <Td>{user.name || 'User'}</Td>
             <Td>{user.email || user.phone}</Td>
             <Td>
-              <select value={user.role} onChange={(event) => updateUser(user, { role: event.target.value })} className="rounded-xl border border-sky-100 px-3 py-2 text-xs font-bold">
+              <select value={user.role} onChange={(event) => updateUser(user, { role: event.target.value })} className="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
             </Td>
-            <Td><button onClick={() => updateUser(user, { isBlocked: !user.isBlocked })} className={`rounded-full px-3 py-2 text-xs font-extrabold ${user.isBlocked ? 'bg-red-50 text-red-500' : 'bg-green-50 text-brand-green'}`}>{user.isBlocked ? 'Unblock' : 'Block'}</button></Td>
+            <Td><button onClick={() => updateUser(user, { isBlocked: !user.isBlocked })} className={`rounded px-3 py-2 text-xs font-extrabold ${user.isBlocked ? 'bg-red-50 text-red-600' : 'bg-brand-leaf text-brand-green'}`}>{user.isBlocked ? 'Unblock' : 'Block'}</button></Td>
             <Td>{formatDate(user.createdAt)}</Td>
           </tr>
         ))}
       </Table>
+    </Panel>
+  )
+}
+
+function InquiriesPanel() {
+  const [inquiries, setInquiries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await adminService.contactInquiries()
+      setInquiries(response.inquiries || [])
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const updateInquiry = async (inquiry, status) => {
+    try {
+      await adminService.updateContactInquiry(inquiry._id, { status })
+      toast.success('Inquiry updated')
+      load()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  const deleteInquiry = async (inquiry) => {
+    const confirmed = window.confirm(`Delete inquiry from ${inquiry.name}?`)
+    if (!confirmed) return
+
+    try {
+      setDeletingId(inquiry._id)
+      setInquiries((current) => current.filter((item) => item._id !== inquiry._id))
+      await adminService.deleteContactInquiry(inquiry._id)
+      toast.success('Inquiry deleted')
+    } catch (error) {
+      load()
+      toast.error(error.message)
+    } finally {
+      setDeletingId('')
+    }
+  }
+
+  if (loading) return <PageSkeleton />
+
+  return (
+    <Panel title="Customer Inquiries" action={<Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button>}>
+      {inquiries.length === 0 ? (
+        <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No contact messages yet.</p>
+      ) : (
+        <div className="grid gap-4">
+          {inquiries.map((inquiry) => (
+            <div key={inquiry._id} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-lg font-black text-brand-ink">{inquiry.name}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-slate-600">
+                    <a href={`mailto:${inquiry.email}`} className="text-slate-800 underline-offset-2 hover:underline">{inquiry.email}</a>
+                    <a href={`https://wa.me/91${inquiry.phone}`} target="_blank" rel="noreferrer" className="text-brand-green underline-offset-2 hover:underline">WhatsApp: {inquiry.phone}</a>
+                    <span>{formatDate(inquiry.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => updateInquiry(inquiry, 'read')} className="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700">
+                    Mark Read
+                  </button>
+                  <button type="button" onClick={() => updateInquiry(inquiry, 'closed')} className="rounded bg-brand-green px-3 py-2 text-xs font-black text-white">
+                    Complete
+                  </button>
+                  <button type="button" onClick={() => deleteInquiry(inquiry)} disabled={deletingId === inquiry._id} className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-500 disabled:cursor-not-allowed disabled:opacity-60">
+                    <Trash2 className="h-3.5 w-3.5" /> {deletingId === inquiry._id ? 'Deleting' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+              <span className={`mt-3 inline-flex rounded px-3 py-1 text-xs font-black ${inquiry.status === 'new' ? 'bg-brand-mist text-brand-blue' : inquiry.status === 'closed' ? 'bg-brand-leaf text-brand-green' : 'bg-slate-50 text-slate-500'}`}>
+                {formatStatus(inquiry.status)}
+              </span>
+              <p className="mt-4 rounded bg-brand-mist p-4 text-sm font-semibold leading-6 text-slate-700">{inquiry.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </Panel>
   )
 }
@@ -886,8 +1125,8 @@ function ReviewsPanel() {
 function RowActions({ onEdit, onDelete }) {
   return (
     <div className="flex gap-2">
-      <button onClick={onEdit} className="rounded-full bg-sky-50 p-2 text-brand-blue"><Edit3 className="h-4 w-4" /></button>
-      <button onClick={onDelete} className="rounded-full bg-red-50 p-2 text-red-500"><Trash2 className="h-4 w-4" /></button>
+      <button onClick={onEdit} className="rounded bg-brand-mist p-2 text-brand-blue"><Edit3 className="h-4 w-4" /></button>
+      <button onClick={onDelete} className="rounded bg-red-50 p-2 text-red-600"><Trash2 className="h-4 w-4" /></button>
     </div>
   )
 }
@@ -897,11 +1136,11 @@ function Table({ headers, children }) {
     <div className="overflow-visible md:overflow-x-auto">
       <table className="mobile-card-table w-full min-w-full text-left text-sm md:min-w-[760px]">
         <thead>
-          <tr className="border-b border-sky-100 text-xs uppercase tracking-[0.12em] text-slate-400">
+          <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
             {headers.map((header) => <th key={header} className="px-3 py-3 font-extrabold">{header}</th>)}
           </tr>
         </thead>
-        <tbody className="divide-y divide-sky-50">{children}</tbody>
+        <tbody className="divide-y divide-slate-100 bg-white">{children}</tbody>
       </table>
     </div>
   )
