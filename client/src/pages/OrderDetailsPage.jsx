@@ -1,4 +1,4 @@
-import { ArrowRight, Ban, CreditCard, MapPin, PackageCheck, RotateCw, Truck } from 'lucide-react'
+import { ArrowRight, Ban, CreditCard, ExternalLink, MapPin, PackageCheck, RotateCw, Truck } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -100,6 +100,17 @@ export default function OrderDetailsPage() {
             <p>{address.addressLine1}</p>
             <p>{address.city}, {address.state} - {address.postalCode}</p>
             <p>{address.phone}</p>
+          </InfoCard>
+          <InfoCard icon={Truck} title="Shipment">
+            <p>Courier: {order.courierName || 'Will update soon'}</p>
+            <p>AWB: {order.awbCode || order.trackingId || 'Not assigned yet'}</p>
+            <p>Status: {formatStatus(order.deliveryStatus || order.orderStatus)}</p>
+            <p>Estimated: {order.estimatedDeliveryDate ? formatDate(order.estimatedDeliveryDate) : 'Will update soon'}</p>
+            {order.trackingUrl && (
+              <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand-blue px-4 py-2 text-sm font-extrabold text-white">
+                Track on Courier Website <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
           </InfoCard>
           <div className="rounded-[1.6rem] border border-sky-100 bg-white p-5 shadow-soft">
             <Button to={`/orders/${order._id}/tracking`} variant="outline" className="w-full rounded-full">Track Shipment <ArrowRight className="h-4 w-4" /></Button>

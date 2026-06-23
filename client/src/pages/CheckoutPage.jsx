@@ -20,7 +20,7 @@ export default function CheckoutPage() {
   const { items, totals, syncCart } = useCart()
   const [addresses, setAddresses] = useState([])
   const [selectedAddress, setSelectedAddress] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('COD')
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE')
   const [couponCode, setCouponCode] = useState('')
   const [coupon, setCoupon] = useState(null)
   const [pending, setPending] = useState(false)
@@ -84,7 +84,7 @@ export default function CheckoutPage() {
     const loaded = await loadRazorpay()
     if (!loaded) {
       toast.error('Razorpay could not load')
-      return
+      return false
     }
 
     const payment = await paymentService.createRazorpayOrder(order._id)
@@ -105,9 +105,16 @@ export default function CheckoutPage() {
           toast.error(error.message)
         }
       },
+      modal: {
+        ondismiss: () => {
+          toast.error('Payment was not completed')
+          setPending(false)
+        },
+      },
       theme: { color: '#0757a8' },
     }
     new window.Razorpay(options).open()
+    return true
   }
 
   const handlePlaceOrder = async () => {
@@ -120,9 +127,10 @@ export default function CheckoutPage() {
         paymentMethod,
         couponCode: coupon?.coupon?.code || couponCode || undefined,
       })
-      toast.success(paymentMethod === 'COD' ? 'COD order placed' : 'Order created. Complete payment.')
+      toast.success('Order created. Complete payment.')
       if (paymentMethod === 'ONLINE') {
-        await openRazorpay(response.order)
+        const opened = await openRazorpay(response.order)
+        if (opened) return
       } else {
         await syncCart()
         navigate(`/orders/${response.order._id}`)
@@ -136,7 +144,7 @@ export default function CheckoutPage() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8">
-      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, choose COD or Razorpay online payment." backTo="/cart" backLabel="Back to cart" />
+      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to cart" />
       <CheckoutSteps />
       <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -161,10 +169,14 @@ export default function CheckoutPage() {
           <div className="rounded-md border border-slate-200 bg-white p-6 shadow-soft">
             <h3 className="mb-5 font-display text-2xl font-black text-slate-950">Payment method</h3>
             <div className="grid gap-3 md:grid-cols-2">
-              {[[PackageCheck, 'COD', 'Cash on Delivery'], [CreditCard, 'ONLINE', 'Razorpay Online']].map(([Icon, value, label]) => (
-                <button key={value} type="button" onClick={() => setPaymentMethod(value)} className={`rounded-md border p-5 text-left transition ${paymentMethod === value ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}>
+              {[
+                [PackageCheck, 'COD', 'Cash on Delivery', true],
+                [CreditCard, 'ONLINE', 'Razorpay Online', false],
+              ].map(([Icon, value, label, disabled]) => (
+                <button key={value} type="button" disabled={disabled} onClick={() => setPaymentMethod(value)} className={`rounded-md border p-5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${paymentMethod === value ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}>
                   <Icon className="mb-3 h-6 w-6 text-brand-blue" />
                   <span className="font-black text-slate-950">{label}</span>
+                  {disabled && <p className="mt-2 text-sm font-extrabold text-red-500">COD is not available</p>}
                 </button>
               ))}
             </div>

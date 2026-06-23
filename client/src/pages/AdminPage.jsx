@@ -1,7 +1,9 @@
 import {
   BarChart3,
   Boxes,
+  Download,
   Edit3,
+  ExternalLink,
   PackageCheck,
   Plus,
   RefreshCw,
@@ -12,7 +14,7 @@ import {
   Truck,
   Users,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -21,6 +23,7 @@ import {
   couponService,
   orderService,
   productService,
+  shiprocketService,
 } from '../api/services'
 import Button from '../components/Button'
 import Input from '../components/Input'
@@ -42,7 +45,7 @@ const tabs = [
 ]
 
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
-const deliveryStatuses = ['pending', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned']
+const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -366,6 +369,8 @@ function OrdersPanel() {
   const [orders, setOrders] = useState([])
   const [selected, setSelected] = useState(null)
   const [detailsOrder, setDetailsOrder] = useState(null)
+  const [shipmentBusy, setShipmentBusy] = useState('')
+  const shipmentBusyRef = useRef(false)
 
   const load = useCallback(async () => {
     try {
@@ -403,10 +408,42 @@ function OrdersPanel() {
     }
   }
 
+  const runShipmentAction = async (order, action, successMessage) => {
+    if (shipmentBusyRef.current) return
+    shipmentBusyRef.current = true
+    setShipmentBusy(action)
+    try {
+      const actions = {
+        create: shiprocketService.createShipment,
+        awb: shiprocketService.assignAwb,
+        label: shiprocketService.generateLabel,
+        pickup: shiprocketService.schedulePickup,
+        track: shiprocketService.track,
+      }
+      const response = await actions[action](order._id)
+      const updatedOrder = response.order || order
+      toast.success(successMessage)
+      setDetailsOrder(updatedOrder)
+      setSelected(null)
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      shipmentBusyRef.current = false
+      setShipmentBusy('')
+    }
+  }
+
   return (
     <div className="space-y-6">
       {detailsOrder && (
-        <AdminOrderDetails order={detailsOrder} onClose={() => setDetailsOrder(null)} onShipment={() => { setSelected(detailsOrder); setDetailsOrder(null) }} />
+        <AdminOrderDetails
+          order={detailsOrder}
+          busy={shipmentBusy}
+          onClose={() => setDetailsOrder(null)}
+          onShipment={() => { setSelected(detailsOrder); setDetailsOrder(null) }}
+          onShipmentAction={runShipmentAction}
+        />
       )}
       {selected && (
         <Panel title={`Update Shipment - ${selected.orderNumber}`} action={<Button variant="ghost" onClick={() => setSelected(null)}>Close</Button>}>
@@ -455,16 +492,58 @@ function OrdersPanel() {
   )
 }
 
-function AdminOrderDetails({ order, onClose, onShipment }) {
+function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction }) {
   const address = order.shippingAddress || {}
   const user = order.user || {}
   const itemsPrice = order.itemsPrice ?? order.orderItems?.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? 0
+  const hasShipment = Boolean(order.shiprocketShipmentId)
+  const hasAwb = Boolean(order.awbCode || order.trackingId)
 
   return (
     <Panel
       title={`Complete Order Details - ${order.orderNumber}`}
       action={
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={Boolean(busy) || hasShipment}
+            onClick={() => onShipmentAction(order, 'create', 'Shiprocket shipment created')}
+          >
+            <PackageCheck className="h-4 w-4" /> {busy === 'create' ? 'Creating...' : 'Create Shipment'}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={Boolean(busy) || !hasShipment || hasAwb}
+            onClick={() => onShipmentAction(order, 'awb', 'AWB assigned')}
+          >
+            <Truck className="h-4 w-4" /> {busy === 'awb' ? 'Assigning...' : 'Assign AWB'}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={Boolean(busy) || !hasShipment}
+            onClick={() => onShipmentAction(order, 'label', 'Label generated')}
+          >
+            <Download className="h-4 w-4" /> {busy === 'label' ? 'Generating...' : 'Generate Label'}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={Boolean(busy) || !hasShipment}
+            onClick={() => onShipmentAction(order, 'pickup', 'Pickup scheduled')}
+          >
+            <Truck className="h-4 w-4" /> {busy === 'pickup' ? 'Scheduling...' : 'Schedule Pickup'}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={Boolean(busy) || !hasAwb}
+            onClick={() => onShipmentAction(order, 'track', 'Shipment tracking synced')}
+          >
+            <RefreshCw className="h-4 w-4" /> {busy === 'track' ? 'Tracking...' : 'Track Shipment'}
+          </Button>
+          {order.labelUrl && (
+            <Button to={order.labelUrl} target="_blank" rel="noreferrer" variant="green">
+              <Download className="h-4 w-4" /> Download Label
+            </Button>
+          )}
           <Button variant="outline" onClick={onShipment}><Truck className="h-4 w-4" /> Update Shipment</Button>
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </div>
@@ -516,11 +595,21 @@ function AdminOrderDetails({ order, onClose, onShipment }) {
         </AdminInfoCard>
 
         <AdminInfoCard title="Delivery Tracking">
-          <DetailLine label="Delivery Status" value={formatStatus(order.deliveryStatus || 'pending')} strong />
+          <DetailLine label="Delivery Status" value={formatStatus(order.deliveryStatus || 'placed')} strong />
+          <DetailLine label="Shiprocket Order" value={order.shiprocketOrderId || 'Not created'} />
+          <DetailLine label="Shiprocket Shipment" value={order.shiprocketShipmentId || 'Not created'} />
           <DetailLine label="Courier Name" value={order.courierName || 'Not assigned'} />
-          <DetailLine label="Tracking ID" value={order.trackingId || 'Not assigned'} />
+          <DetailLine label="AWB Number" value={order.awbCode || order.trackingId || 'Not assigned'} />
           <DetailLine label="Tracking URL" value={order.trackingUrl || 'Not assigned'} />
+          <DetailLine label="Shipment Status" value={order.shipmentStatus || 'Not assigned'} />
+          <DetailLine label="Pickup Status" value={order.pickupStatus || 'Not scheduled'} />
+          <DetailLine label="Label URL" value={order.labelUrl || 'Not generated'} />
           <DetailLine label="Estimated Delivery" value={order.estimatedDeliveryDate ? formatDate(order.estimatedDeliveryDate) : 'Not assigned'} />
+          {order.trackingUrl && (
+            <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand-blue px-4 py-2 text-sm font-extrabold text-white">
+              Track on Courier Website <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
         </AdminInfoCard>
       </div>
 

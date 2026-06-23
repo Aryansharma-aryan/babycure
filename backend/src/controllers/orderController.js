@@ -11,7 +11,7 @@ const { notifyUser } = require('../services/notificationService')
 
 const cancellableStatuses = ['placed', 'processing']
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
-const deliveryStatuses = ['pending', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned']
+const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -40,7 +40,7 @@ const restoreOrderStock = async (order, session) => {
 }
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { shippingAddress, paymentMethod = 'COD', couponCode } = req.body
+  const { shippingAddress, paymentMethod = 'ONLINE', couponCode } = req.body
 
   if (!mongoose.isValidObjectId(shippingAddress)) {
     throw new AppError('Valid shipping address is required.', 400)
@@ -48,6 +48,10 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (!['COD', 'ONLINE'].includes(paymentMethod)) {
     throw new AppError('Valid payment method is required.', 400)
+  }
+
+  if (paymentMethod === 'COD') {
+    throw new AppError('COD is not available. Please use online payment.', 400)
   }
 
   const session = await mongoose.startSession()
@@ -146,9 +150,11 @@ const createOrder = asyncHandler(async (req, res) => {
         { session },
       )
 
-      cart.items = []
-      cart.cartTotal = 0
-      await cart.save({ session })
+      if (paymentMethod === 'COD') {
+        cart.items = []
+        cart.cartTotal = 0
+        await cart.save({ session })
+      }
 
       order = createdOrder
     })
@@ -308,8 +314,14 @@ const getTrackingPayload = (order) => ({
   orderNumber: order.orderNumber,
   orderStatus: order.orderStatus,
   trackingId: order.trackingId,
+  awbCode: order.awbCode,
+  shiprocketOrderId: order.shiprocketOrderId,
+  shiprocketShipmentId: order.shiprocketShipmentId,
   courierName: order.courierName,
   trackingUrl: order.trackingUrl,
+  labelUrl: order.labelUrl,
+  pickupStatus: order.pickupStatus,
+  shipmentStatus: order.shipmentStatus,
   estimatedDeliveryDate: order.estimatedDeliveryDate,
   deliveryStatus: order.deliveryStatus,
   trackingHistory: order.trackingHistory,
@@ -321,7 +333,7 @@ const getOrderTracking = asyncHandler(async (req, res) => {
     : { _id: req.params.id, user: req.user._id }
 
   const order = await Order.findOne(filter).select(
-    'orderNumber orderStatus trackingId courierName trackingUrl estimatedDeliveryDate deliveryStatus trackingHistory',
+    'orderNumber orderStatus trackingId awbCode shiprocketOrderId shiprocketShipmentId courierName trackingUrl labelUrl pickupStatus shipmentStatus estimatedDeliveryDate deliveryStatus trackingHistory',
   )
 
   if (!order) {
@@ -335,7 +347,7 @@ const getOrderTracking = asyncHandler(async (req, res) => {
 })
 
 const updateDeliveryTracking = asyncHandler(async (req, res) => {
-  const allowedFields = ['courierName', 'trackingId', 'trackingUrl', 'estimatedDeliveryDate', 'deliveryStatus']
+  const allowedFields = ['courierName', 'trackingId', 'awbCode', 'trackingUrl', 'estimatedDeliveryDate', 'deliveryStatus']
   const updates = {}
 
   allowedFields.forEach((field) => {
@@ -355,6 +367,9 @@ const updateDeliveryTracking = asyncHandler(async (req, res) => {
   }
 
   Object.assign(order, updates)
+  if (updates.awbCode) {
+    order.trackingId = updates.awbCode
+  }
 
   if (updates.deliveryStatus) {
     order.trackingHistory.push({

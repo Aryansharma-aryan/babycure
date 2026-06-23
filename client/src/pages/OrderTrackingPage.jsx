@@ -14,6 +14,7 @@ const steps = [
   { key: 'processing', label: 'Processing' },
   { key: 'packed', label: 'Packed' },
   { key: 'shipped', label: 'Shipped' },
+  { key: 'in_transit', label: 'In Transit' },
   { key: 'out_for_delivery', label: 'Out for Delivery' },
   { key: 'delivered', label: 'Delivered' },
 ]
@@ -24,9 +25,9 @@ const statusRank = {
   pending: 1,
   packed: 2,
   shipped: 3,
-  in_transit: 3,
-  out_for_delivery: 4,
-  delivered: 5,
+  in_transit: 4,
+  out_for_delivery: 5,
+  delivered: 6,
 }
 
 export default function OrderTrackingPage() {
@@ -103,7 +104,7 @@ export default function OrderTrackingPage() {
                   </div>
                   <div className="pb-8">
                     <p className="font-display text-lg font-extrabold text-brand-ink">{step.label}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">{completed ? 'Completed or in progress' : 'Waiting for update'}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-500">{completed ? 'Completed or in progress' : 'Waiting for Shiprocket update'}</p>
                   </div>
                 </div>
               )
@@ -126,12 +127,12 @@ function TrackingInfo({ tracking }) {
       <h3 className="font-display text-xl font-extrabold text-brand-ink">Courier Details</h3>
       <div className="mt-4 space-y-3 text-sm font-semibold text-slate-600">
         <p>Courier: <span className="font-extrabold text-brand-ink">{tracking.courierName || 'Will update soon'}</span></p>
-        <p>Tracking ID: <span className="font-extrabold text-brand-ink">{tracking.trackingId || 'Not assigned yet'}</span></p>
+        <p>AWB Number: <span className="font-extrabold text-brand-ink">{tracking.awbCode || tracking.trackingId || 'Not assigned yet'}</span></p>
         <p>Estimated Delivery: <span className="font-extrabold text-brand-ink">{tracking.estimatedDeliveryDate ? formatDate(tracking.estimatedDeliveryDate) : 'Will update soon'}</span></p>
       </div>
       {tracking.trackingUrl && (
         <Link to={tracking.trackingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-extrabold text-white">
-          Courier Tracking <ExternalLink className="h-4 w-4" />
+          Track on Courier Website <ExternalLink className="h-4 w-4" />
         </Link>
       )}
     </div>
@@ -146,7 +147,7 @@ function TrackingHistory({ history }) {
         {history.length === 0 ? (
           <div className="rounded-2xl bg-sky-50 p-4 text-sm font-semibold text-slate-500">
             <Package className="mb-2 h-5 w-5 text-brand-blue" />
-            Tracking history will appear after admin updates delivery.
+            Tracking history will appear after Shiprocket sends the first shipment update.
           </div>
         ) : (
           history.slice().reverse().map((item, index) => (

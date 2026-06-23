@@ -56,6 +56,14 @@ export const orderService = {
   adminDelivery: (id, payload) => api.patch(`/orders/admin/${id}/delivery`, payload),
 }
 
+export const shiprocketService = {
+  createShipment: (orderId) => api.post(`/shiprocket/create-shipment/${orderId}`),
+  assignAwb: (orderId) => api.post(`/shiprocket/assign-awb/${orderId}`),
+  generateLabel: (orderId) => api.post(`/shiprocket/generate-label/${orderId}`),
+  schedulePickup: (orderId) => api.post(`/shiprocket/schedule-pickup/${orderId}`),
+  track: (orderId) => api.get(`/shiprocket/track/${orderId}`),
+}
+
 export const paymentService = {
   createRazorpayOrder: (orderId) => api.post('/payments/razorpay/order', { orderId }),
   verifyRazorpayPayment: (payload) => api.post('/payments/razorpay/verify', payload),

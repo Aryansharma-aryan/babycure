@@ -36,7 +36,7 @@ const trackingHistorySchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ['pending', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned'],
+      enum: ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
       required: true,
     },
     message: {
@@ -128,7 +128,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ['COD', 'ONLINE'],
-      default: 'COD',
+      default: 'ONLINE',
     },
     paymentStatus: {
       type: String,
@@ -164,6 +164,21 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    shiprocketOrderId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    shiprocketShipmentId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    awbCode: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     courierName: {
       type: String,
       trim: true,
@@ -175,10 +190,22 @@ const orderSchema = new mongoose.Schema(
     estimatedDeliveryDate: {
       type: Date,
     },
+    labelUrl: {
+      type: String,
+      trim: true,
+    },
+    pickupStatus: {
+      type: String,
+      trim: true,
+    },
+    shipmentStatus: {
+      type: String,
+      trim: true,
+    },
     deliveryStatus: {
       type: String,
-      enum: ['pending', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned'],
-      default: 'pending',
+      enum: ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
+      default: 'placed',
       index: true,
     },
     trackingHistory: {

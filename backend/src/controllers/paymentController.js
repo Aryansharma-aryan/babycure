@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const Cart = require('../models/Cart')
 const Order = require('../models/Order')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
@@ -88,6 +89,7 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     await markCouponUsed(order)
   }
   await order.save()
+  await Cart.updateOne({ user: order.user }, { $set: { items: [], cartTotal: 0 } })
 
   notifyUser({
     userId: order.user,
