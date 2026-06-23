@@ -143,19 +143,19 @@ export default function CheckoutPage() {
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
       <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to cart" />
       <CheckoutSteps />
       <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
-          <div className="rounded-md border border-slate-200 bg-white p-6 shadow-soft">
+          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-soft sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-display text-2xl font-black text-slate-950">Delivery address</h3>
               <Button variant="ghost" onClick={() => setShowAddressForm((value) => !value)}><Plus className="h-4 w-4" /> Add</Button>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {addresses.map((address) => (
-                <button key={address._id} type="button" onClick={() => setSelectedAddress(address._id)} className={`rounded-md border p-4 text-left transition ${selectedAddress === address._id ? 'border-brand-blue bg-blue-50 shadow-[0_14px_32px_rgba(7,87,168,0.10)]' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
+                <button key={address._id} type="button" onClick={() => setSelectedAddress(address._id)} className={`min-w-0 rounded-md border p-4 text-left transition ${selectedAddress === address._id ? 'border-brand-blue bg-blue-50 shadow-[0_14px_32px_rgba(7,87,168,0.10)]' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
                   <MapPin className="mb-3 h-5 w-5 text-brand-green" />
                   <p className="font-black text-slate-950">{address.fullName}</p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{address.addressLine1}, {address.city}, {address.state} - {address.postalCode}</p>
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
             {showAddressForm && <AddressForm onSubmit={handleAddAddress} />}
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-white p-6 shadow-soft">
+          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-soft sm:p-6">
             <h3 className="mb-5 font-display text-2xl font-black text-slate-950">Payment method</h3>
             <div className="grid gap-3 md:grid-cols-2">
               {[
@@ -198,7 +198,7 @@ export default function CheckoutPage() {
 
 function AddressForm({ onSubmit }) {
   return (
-    <form className="mt-6 rounded-md bg-blue-50/60 p-5" onSubmit={onSubmit}>
+    <form className="mt-6 rounded-md bg-blue-50/60 p-4 sm:p-5" onSubmit={onSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
         <Input label="Full Name" name="fullName" placeholder="Full Name" />
         <Input label="Phone" name="phone" placeholder="9876543210" />

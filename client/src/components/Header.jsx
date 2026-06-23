@@ -38,7 +38,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-sky-100/80 bg-white/78 shadow-[0_14px_45px_rgba(74,166,217,0.10)] backdrop-blur-2xl">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-2 pl-5 pr-3 md:gap-4 lg:py-1.5 lg:pl-6 lg:pr-4">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:gap-4 lg:py-1.5 lg:pl-6 lg:pr-4">
         <Logo />
         <div className="hidden min-w-0 items-center justify-start gap-4 sm:flex xl:gap-5">
           <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue lg:flex">
@@ -52,7 +52,7 @@ export default function Header() {
             <Heart className="h-5 w-5 fill-current" />
           </Link>
         </div>
-        <div className="flex items-center justify-end gap-3 xl:gap-4">
+        <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3 xl:gap-4">
           <Link to={user?.role === 'admin' ? '/admin' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
               <CircleUserRound className="h-5 w-5" />
@@ -67,16 +67,16 @@ export default function Header() {
           <Link to="/orders" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-blue shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:bg-sky-50 xl:grid" aria-label="Orders">
             <PackageCheck className="h-5 w-5" />
           </Link>
-          <Link to="/cart" className="relative flex items-center gap-2 rounded-full px-2 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50">
-            <span className="relative grid h-12 w-12 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
-              <ShoppingCart className="h-[22px] w-[22px]" />
+          <Link to="/cart" className="relative flex items-center gap-2 rounded-full px-1 py-1.5 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 sm:px-2 sm:py-2">
+            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)] sm:h-12 sm:w-12">
+              <ShoppingCart className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
               {cartCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-green text-[11px] text-white shadow-[0_8px_18px_rgba(124,197,118,0.32)]">{cartCount}</span>}
             </span>
             <span className="hidden sm:block leading-tight">
               Cart ({cartCount})<br />{formatPrice(totals.total)}
             </span>
           </Link>
-          <button className="grid h-11 w-11 place-items-center rounded-full border border-sky-100 bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.10)] lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">
+          <button className="grid h-10 w-10 place-items-center rounded-full border border-sky-100 bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.10)] sm:h-11 sm:w-11 lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
@@ -94,7 +94,7 @@ export default function Header() {
       {menuOpen && (
         <div className="baby-drawer-backdrop fixed inset-0 z-[70] h-dvh overflow-hidden bg-brand-ink/35 lg:hidden">
           <button type="button" className="absolute inset-0 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-          <nav className="baby-drawer-panel fixed inset-y-0 right-0 flex h-dvh w-[min(92vw,410px)] flex-col overflow-hidden rounded-l-[1.6rem] border-l border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)]">
+          <nav className="baby-drawer-panel fixed inset-y-0 right-0 flex h-dvh w-[min(100vw,410px)] flex-col overflow-hidden rounded-l-[1.1rem] border-l border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)] sm:w-[min(92vw,410px)] sm:rounded-l-[1.6rem]">
           <div className="flex items-center justify-between border-b border-sky-100 bg-white px-4 py-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>

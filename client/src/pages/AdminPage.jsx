@@ -68,19 +68,19 @@ export default function AdminPage() {
   if (authLoading || !isAuthenticated || user?.role !== 'admin') return <PageSkeleton />
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
       <PageHeader eyebrow="Admin CRM" title="BabyCure Control Center" copy="Manage products, orders, shipment tracking, coupons, users, reviews and analytics." backTo="/" backLabel="Back to store" />
       <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
-        <aside className="h-max overflow-x-auto rounded-[1.6rem] border border-sky-100 bg-white p-3 shadow-soft lg:sticky lg:top-36">
-          <div className="flex min-w-max gap-2 lg:block lg:min-w-0">
+        <aside className="h-max rounded-[1.1rem] border border-sky-100 bg-white p-2 shadow-soft sm:rounded-[1.6rem] sm:p-3 lg:sticky lg:top-36">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:block lg:min-w-0">
           {tabs.map(([key, Icon, label]) => (
             <button
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-extrabold transition lg:mb-2 lg:w-full ${activeTab === key ? 'bg-brand-mist text-brand-blue shadow-[0_12px_32px_rgba(74,166,217,0.12)]' : 'text-slate-500 hover:bg-sky-50 hover:text-brand-blue'}`}
+              className={`flex min-w-0 items-center gap-2 rounded-xl px-3 py-3 text-left text-xs font-extrabold transition sm:gap-3 sm:rounded-2xl sm:px-4 sm:text-sm lg:mb-2 lg:w-full ${activeTab === key ? 'bg-brand-mist text-brand-blue shadow-[0_12px_32px_rgba(74,166,217,0.12)]' : 'text-slate-500 hover:bg-sky-50 hover:text-brand-blue'}`}
             >
-              <Icon className="h-5 w-5" /> {label}
+              <Icon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" /> <span className="truncate">{label}</span>
             </button>
           ))}
           </div>
@@ -101,7 +101,7 @@ export default function AdminPage() {
 
 function Panel({ title, action, children }) {
   return (
-    <div className="rounded-[1.8rem] border border-sky-100 bg-white p-5 shadow-soft">
+    <div className="rounded-[1.1rem] border border-sky-100 bg-white p-4 shadow-soft sm:rounded-[1.8rem] sm:p-5">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-extrabold text-brand-ink">{title}</h2>
         {action}
@@ -549,7 +549,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
         </div>
       }
     >
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-3 xl:gap-5">
         <AdminInfoCard title="Customer">
           <DetailLine label="Name" value={user.name || address.fullName || 'Customer'} />
           <DetailLine label="Email" value={user.email || 'Not available'} />
@@ -585,7 +585,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
         </AdminInfoCard>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+      <div className="mt-5 grid min-w-0 gap-4 xl:grid-cols-2 xl:gap-5">
         <AdminInfoCard title="Order Status">
           <DetailLine label="Order Status" value={formatStatus(order.orderStatus)} strong />
           <DetailLine label="Created" value={formatDate(order.createdAt)} />
@@ -613,10 +613,10 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
         </AdminInfoCard>
       </div>
 
-      <div className="mt-5 rounded-[1.4rem] border border-sky-100 bg-sky-50/40 p-4">
+      <div className="mt-5 rounded-[1.1rem] border border-sky-100 bg-sky-50/40 p-3 sm:rounded-[1.4rem] sm:p-4">
         <h3 className="font-display text-xl font-extrabold text-brand-ink">Ordered Products</h3>
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="mobile-card-table w-full min-w-full text-left text-sm md:min-w-[720px]">
             <thead>
               <tr className="border-b border-sky-100 text-xs uppercase tracking-[0.12em] text-slate-400">
                 <th className="px-3 py-3">Product</th>
@@ -669,7 +669,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
 
 function AdminInfoCard({ title, children }) {
   return (
-    <div className="rounded-[1.4rem] border border-sky-100 bg-white p-5 shadow-[0_16px_48px_rgba(74,166,217,0.08)]">
+    <div className="min-w-0 rounded-[1.1rem] border border-sky-100 bg-white p-4 shadow-[0_16px_48px_rgba(74,166,217,0.08)] sm:rounded-[1.4rem] sm:p-5">
       <h3 className="mb-4 font-display text-xl font-extrabold text-brand-ink">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
@@ -680,7 +680,7 @@ function DetailLine({ label, value, strong = false }) {
   return (
     <div className="grid gap-1 border-b border-sky-50 pb-2 last:border-0 sm:grid-cols-[140px_1fr]">
       <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</span>
-      <span className={`break-words text-sm ${strong ? 'font-display text-lg font-extrabold text-brand-blue' : 'font-semibold text-slate-700'}`}>
+      <span className={`min-w-0 break-words text-sm ${strong ? 'font-display text-lg font-extrabold text-brand-blue' : 'font-semibold text-slate-700'}`}>
         {value || 'Not available'}
       </span>
     </div>
@@ -894,8 +894,8 @@ function RowActions({ onEdit, onDelete }) {
 
 function Table({ headers, children }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm">
+    <div className="overflow-visible md:overflow-x-auto">
+      <table className="mobile-card-table w-full min-w-full text-left text-sm md:min-w-[760px]">
         <thead>
           <tr className="border-b border-sky-100 text-xs uppercase tracking-[0.12em] text-slate-400">
             {headers.map((header) => <th key={header} className="px-3 py-3 font-extrabold">{header}</th>)}

@@ -59,11 +59,11 @@ export default function OrderDetailsPage() {
   const address = order.shippingAddress || {}
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
       <PageHeader eyebrow="Order Details" title={order.orderNumber} copy="Review products, payment, address and delivery status." backTo="/orders" backLabel="Back to orders" />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
         <div className="space-y-6">
-          <div className="rounded-[1.8rem] border border-sky-100 bg-white p-6 shadow-soft">
+          <div className="rounded-[1.1rem] border border-sky-100 bg-white p-4 shadow-soft sm:rounded-[1.8rem] sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-slate-500">Placed on {formatDate(order.createdAt)}</p>
@@ -73,9 +73,9 @@ export default function OrderDetailsPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[1.8rem] border border-sky-100 bg-white shadow-soft">
+          <div className="overflow-hidden rounded-[1.1rem] border border-sky-100 bg-white shadow-soft sm:rounded-[1.8rem]">
             {order.orderItems?.map((item) => (
-              <div key={`${item.product}-${item.name}`} className="grid gap-4 border-b border-sky-50 p-5 last:border-0 sm:grid-cols-[90px_1fr_auto] sm:items-center">
+              <div key={`${item.product}-${item.name}`} className="grid min-w-0 gap-4 border-b border-sky-50 p-4 last:border-0 sm:grid-cols-[90px_1fr_auto] sm:items-center sm:p-5">
                 <div className="grid h-20 place-items-center rounded-2xl bg-sky-50">
                   {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <PackageCheck className="h-8 w-8 text-brand-blue" />}
                 </div>
@@ -131,7 +131,7 @@ export default function OrderDetailsPage() {
 
 function InfoCard({ icon: Icon, title, children }) {
   return (
-    <div className="rounded-[1.6rem] border border-sky-100 bg-white p-5 text-sm font-semibold leading-7 text-slate-600 shadow-soft">
+    <div className="min-w-0 rounded-[1.1rem] border border-sky-100 bg-white p-4 text-sm font-semibold leading-7 text-slate-600 shadow-soft sm:rounded-[1.6rem] sm:p-5">
       <div className="mb-4 flex items-center gap-3">
         <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-mist text-brand-blue">
           <Icon className="h-5 w-5" />
