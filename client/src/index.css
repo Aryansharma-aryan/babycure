@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -78,6 +78,63 @@ textarea:focus-visible {
 
 img {
   max-width: 100%;
+}
+
+.about-page {
+  --about-green: #78a73b;
+  --about-cream: #fffefa;
+  --about-sage: #f2f7ea;
+}
+
+.about-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(3.35rem, 6vw, 5.85rem);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 0.92;
+}
+
+.about-title span {
+  color: var(--about-green);
+}
+
+.about-kicker {
+  color: var(--about-green);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+}
+
+.about-section-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2.1rem, 3vw, 2.7rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.about-blob-bg {
+  border-radius: 54% 46% 44% 56% / 34% 38% 62% 66%;
+  transform: rotate(-3deg);
+}
+
+.about-hero-photo {
+  border-radius: 54% 46% 44% 56% / 34% 38% 62% 66%;
+  outline: 1px dashed rgba(125, 166, 59, 0.28);
+  outline-offset: 12px;
+}
+
+.about-product-oval {
+  border-radius: 45% 55% 46% 54% / 58% 48% 52% 42%;
+}
+
+.about-wave {
+  background:
+    radial-gradient(120% 58% at 50% -18%, #fffefa 0 48%, transparent 49%),
+    radial-gradient(120% 58% at 50% 118%, #fffefa 0 48%, transparent 49%),
+    var(--about-sage);
 }
 
 .font-black {
