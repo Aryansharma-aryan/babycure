@@ -80,6 +80,22 @@ img {
   max-width: 100%;
 }
 
+.font-black {
+  font-weight: 700;
+}
+
+.font-extrabold {
+  font-weight: 650;
+}
+
+.font-bold {
+  font-weight: 550;
+}
+
+.font-semibold {
+  font-weight: 450;
+}
+
 .brand-logo {
   display: inline-flex;
   align-items: center;

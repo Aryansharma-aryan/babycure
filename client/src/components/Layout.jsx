@@ -1,4 +1,5 @@
-import { Link, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import Footer from './Footer'
 import Header from './Header'
 import MobileBottomNav from './MobileBottomNav'
@@ -6,6 +7,7 @@ import MobileBottomNav from './MobileBottomNav'
 export default function Layout() {
   return (
     <>
+      <ScrollToTop />
       <Header />
       <main>
         <Outlet />
@@ -15,6 +17,16 @@ export default function Layout() {
       <MobileBottomNav />
     </>
   )
+}
+
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname, search])
+
+  return null
 }
 
 function SupportBand() {

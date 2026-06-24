@@ -13,7 +13,7 @@ const publicNavLinks = [
   { label: 'Categories', to: '/category?view=categories' },
   { label: 'Best Sellers', to: '/category?sort=-ratingsAverage' },
   { label: 'Orders', to: '/orders' },
-  { label: 'About', to: '/blog' },
+  { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ]
 

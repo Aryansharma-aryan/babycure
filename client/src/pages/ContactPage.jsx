@@ -10,7 +10,7 @@ const contactDetails = {
   email: 'info@babycureindia.com',
   phone: '8607201606',
   address: '1277, Sector 5, Kurukshetra, Haryana 136118',
-  instagram: 'https://www.instagram.com/surpreetdhamija?igsh=NmFkeGg5aXhvM2Jm',
+  instagram: 'https://www.instagram.com/babycureindia?igsh=MWJucmR1eWNuajh3cw%3D%3D&utm_source=qr',
 }
 
 const whatsappLink = `https://wa.me/91${contactDetails.phone}?text=${encodeURIComponent('Hi BabyCure, I need help with baby care products.')}`
