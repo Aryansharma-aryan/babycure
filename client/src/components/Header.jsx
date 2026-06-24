@@ -84,9 +84,9 @@ export default function Header() {
       <div className="mx-auto block max-w-[1180px] px-4 pb-3 sm:hidden">
         <SearchBar compact />
       </div>
-      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-9 px-4 pb-3 text-sm font-extrabold text-brand-ink lg:flex xl:gap-11">
+      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-7 px-4 pb-3 text-brand-ink lg:flex xl:gap-9">
         {navLinks.map(({ label, to }) => (
-          <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `rounded-full px-5 py-2.5 transition ${isActive ? 'bg-sky-50 text-brand-blue shadow-[0_12px_28px_rgba(74,166,217,0.12)]' : 'hover:bg-sky-50 hover:text-brand-blue'}`}>
+          <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `main-nav-link ${isActive ? 'main-nav-link-active' : ''}`}>
             {label}
           </NavLink>
         ))}
