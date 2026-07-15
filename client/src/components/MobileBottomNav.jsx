@@ -1,10 +1,10 @@
-import { Baby, CircleUserRound, Heart, PackageCheck, ShoppingCart } from 'lucide-react'
+import { Baby, CircleUserRound, Heart, PackageCheck, ShoppingBag } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const items = [
   ['/', Heart, 'Home'],
   ['/category', Baby, 'Shop'],
-  ['/cart', ShoppingCart, 'Cart'],
+  ['/cart', ShoppingBag, 'Bag'],
   ['/orders', PackageCheck, 'Orders'],
   ['/login', CircleUserRound, 'Account'],
 ]

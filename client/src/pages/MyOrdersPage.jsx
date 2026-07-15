@@ -1,7 +1,7 @@
-import { Clock, Eye, PackageCheck, RotateCw, Truck } from 'lucide-react'
+import { Clock, Download, Eye, PackageCheck, RotateCw, Truck } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { orderService } from '../api/services'
 import Button from '../components/Button'
 import PageHeader from '../components/PageHeader'
@@ -36,6 +36,22 @@ export default function MyOrdersPage() {
     }
   }, [])
 
+  const downloadInvoice = async (order) => {
+    try {
+      const blob = await orderService.invoice(order._id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${order.orderNumber}-invoice.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
   useEffect(() => {
     if (authLoading) return
     if (!isAuthenticated) {
@@ -65,31 +81,42 @@ export default function MyOrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
-            <article key={order._id} className="rounded-[1.6rem] border border-sky-100 bg-white p-5 shadow-[0_18px_60px_rgba(74,166,217,0.10)] transition hover:-translate-y-1 hover:shadow-premium">
-              <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="font-display text-xl font-extrabold text-brand-ink">{order.orderNumber}</h3>
-                    <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${statusStyles[order.orderStatus] || 'bg-slate-50 text-slate-500'}`}>
-                      {formatStatus(order.orderStatus)}
-                    </span>
-                    <span className="rounded-full bg-brand-leaf px-3 py-1 text-xs font-extrabold text-brand-green">{order.paymentMethod}</span>
+          {orders.map((order) => {
+            const isDelivered = order.orderStatus === 'delivered' || order.deliveryStatus === 'delivered'
+            const returnWindowActive = isDelivered && isReturnWindowActive(order)
+            return (
+              <article key={order._id} className="rounded-[1.6rem] border border-sky-100 bg-white p-5 shadow-[0_18px_60px_rgba(74,166,217,0.10)] transition hover:-translate-y-1 hover:shadow-premium">
+                <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="font-display text-xl font-extrabold text-brand-ink">{order.orderNumber}</h3>
+                      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${statusStyles[order.orderStatus] || 'bg-slate-50 text-slate-500'}`}>
+                        {formatStatus(order.orderStatus)}
+                      </span>
+                      <span className="rounded-full bg-brand-leaf px-3 py-1 text-xs font-extrabold text-brand-green">{order.paymentMethod}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-slate-500">
+                      <span className="inline-flex items-center gap-2"><Clock className="h-4 w-4" /> {formatDate(order.createdAt)}</span>
+                      <span>{order.orderItems?.length || 0} item(s)</span>
+                      <span>Payment: {formatStatus(order.paymentStatus)}</span>
+                      <span className="font-extrabold text-brand-blue">{formatPrice(order.totalPrice)}</span>
+                    </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-slate-500">
-                    <span className="inline-flex items-center gap-2"><Clock className="h-4 w-4" /> {formatDate(order.createdAt)}</span>
-                    <span>{order.orderItems?.length || 0} item(s)</span>
-                    <span>Payment: {formatStatus(order.paymentStatus)}</span>
-                    <span className="font-extrabold text-brand-blue">{formatPrice(order.totalPrice)}</span>
+                  <div className="flex flex-wrap gap-3">
+                    <Button to={`/orders/${order._id}`} variant="ghost" className="rounded-full"><Eye className="h-4 w-4" /> Details</Button>
+                    <Button type="button" variant="ghost" className="rounded-full" onClick={() => downloadInvoice(order)}><Download className="h-4 w-4" /> Invoice</Button>
+                    <Button to={`/orders/${order._id}/tracking`} variant="outline" className="rounded-full"><Truck className="h-4 w-4" /> Track</Button>
+                    {returnWindowActive && (
+                      <>
+                        <Button to={`/orders/${order._id}?action=return`} variant="outline" className="rounded-full"><RotateCw className="h-4 w-4" /> Return Product</Button>
+                        <Button to={`/orders/${order._id}?action=replacement`} className="rounded-full"><PackageCheck className="h-4 w-4" /> Replace Product</Button>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button to={`/orders/${order._id}`} variant="ghost" className="rounded-full"><Eye className="h-4 w-4" /> Details</Button>
-                  <Button to={`/orders/${order._id}/tracking`} variant="outline" className="rounded-full"><Truck className="h-4 w-4" /> Track</Button>
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            )
+          })}
         </div>
       )}
     </section>
@@ -103,4 +130,10 @@ export function formatStatus(value = '') {
 export function formatDate(value) {
   if (!value) return 'Not available'
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+}
+
+function isReturnWindowActive(order) {
+  const deliveredAt = order.deliveredAt || order.updatedAt || order.createdAt
+  if (!deliveredAt) return true
+  return Date.now() - new Date(deliveredAt).getTime() <= 48 * 60 * 60 * 1000
 }

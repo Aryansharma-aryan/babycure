@@ -96,7 +96,7 @@ export function CartProvider({ children }) {
     }
     const response = await cartService.clear()
     dispatch({ type: 'SET', items: normalizeCartItems(response.cart) })
-    toast.success('Cart cleared')
+    toast.success('Bag cleared')
   }, [isAuthenticated])
 
   const value = useMemo(

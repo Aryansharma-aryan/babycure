@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [otpHint, setOtpHint] = useState('')
   const [resetEmail, setResetEmail] = useState('')
   const [resetOtpSent, setResetOtpSent] = useState(false)
+  const [formResetKey, setFormResetKey] = useState(0)
   const [pending, setPending] = useState(false)
   const navigate = useNavigate()
   const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
@@ -109,7 +110,10 @@ export default function LoginPage() {
 
   const handleSendPasswordOtp = async (event) => {
     event.preventDefault()
+    await sendResetOtp()
+  }
 
+  const sendResetOtp = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
       toast.error('Please enter your registered email address')
       return
@@ -163,11 +167,24 @@ export default function LoginPage() {
     setPending(true)
     try {
       await logout()
+      setMode('login')
+      setAuthType('email')
+      setPhone('')
+      setOtpSent(false)
+      setOtpHint('')
+      setResetEmail('')
+      setResetOtpSent(false)
+      setFormResetKey((key) => key + 1)
     } catch (error) {
       toast.error(error.message)
     } finally {
       setPending(false)
     }
+  }
+
+  const switchEmailMode = (nextMode) => {
+    setMode(nextMode)
+    setFormResetKey((key) => key + 1)
   }
 
   return (
@@ -238,25 +255,25 @@ export default function LoginPage() {
               <h2 className="mt-6 font-display text-3xl font-black text-slate-950">{title}</h2>
 
               {authType === 'email' ? (
-                <form className="mt-7" onSubmit={handleEmailSubmit}>
+                <form key={`email-${mode}-${formResetKey}`} className="mt-7" onSubmit={handleEmailSubmit} autoComplete="off">
                   <div className="mb-5 inline-flex rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12)]">
                     {['login', 'register'].map((item) => (
-                      <button key={item} type="button" className={`rounded-full px-5 py-2 text-sm font-black capitalize transition hover:text-brand-blue ${mode === item ? 'bg-brand-leaf text-brand-green shadow-sm' : 'text-slate-500'}`} onClick={() => setMode(item)}>
+                      <button key={item} type="button" className={`rounded-full px-5 py-2 text-sm font-black capitalize transition hover:text-brand-blue ${mode === item ? 'bg-brand-leaf text-brand-green shadow-sm' : 'text-slate-500'}`} onClick={() => switchEmailMode(item)}>
                         {item}
                       </button>
                     ))}
                   </div>
-                  {mode === 'register' && <Input label="Full Name" name="name" placeholder="Full Name" />}
+                  {mode === 'register' && <Input label="Full Name" name="name" placeholder="Full Name" autoComplete="off" />}
                   <div className="mt-4">
-                    <Input label="Email Address" name="email" type="email" placeholder="Email Address" autoComplete="email" />
+                    <Input label="Email Address" name="email" type="email" placeholder="Email Address" autoComplete="off" />
                   </div>
                   {mode === 'register' && (
                     <div className="mt-4">
-                      <Input label="Phone Number" name="phone" inputMode="numeric" maxLength="10" placeholder="9876543210" autoComplete="tel" />
+                      <Input label="Phone Number" name="phone" inputMode="numeric" maxLength="10" placeholder="9876543210" autoComplete="off" />
                     </div>
                   )}
                   <div className="mt-4">
-                    <Input label="Password" name="password" type="password" placeholder="Password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+                    <Input label="Password" name="password" type="password" placeholder="Password" autoComplete="new-password" />
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm font-bold">
                     <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" className="accent-brand-blue" /> Remember me</label>
@@ -291,6 +308,16 @@ export default function LoginPage() {
                   <Button type="submit" variant="green" className="mt-7 w-full" disabled={pending}>
                     {pending ? 'Please wait...' : resetOtpSent ? 'Verify OTP & Reset Password' : 'Send Reset OTP'}
                   </Button>
+                  {resetOtpSent && (
+                    <button
+                      type="button"
+                      className="mt-4 w-full rounded-full border border-sky-100 bg-sky-50 px-5 py-3 text-sm font-black text-brand-blue transition hover:border-brand-blue hover:bg-white disabled:opacity-60"
+                      onClick={sendResetOtp}
+                      disabled={pending}
+                    >
+                      {pending ? 'Sending OTP...' : 'Resend OTP'}
+                    </button>
+                  )}
                   <button type="button" className="mt-4 text-sm font-black text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('email'); setResetEmail(''); setResetOtpSent(false) }}>
                     Back to login
                   </button>

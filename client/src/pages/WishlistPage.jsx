@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react'
+import { Heart, ShoppingBag, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
@@ -122,7 +122,7 @@ export default function WishlistPage() {
                     onClick={() => moveToCart(product)}
                     className="flex items-center justify-center gap-2 rounded-full bg-brand-blue px-4 py-3 text-sm font-black text-white shadow-[0_16px_38px_rgba(74,166,217,0.24)] transition duration-300 hover:-translate-y-1 hover:bg-sky-500 disabled:opacity-60"
                   >
-                    Add to Cart <ShoppingCart className="h-4 w-4" />
+                    Add to Bag <ShoppingBag className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => removeItem(product._id)} className="grid h-[46px] place-items-center rounded-full bg-red-50 text-red-500 transition hover:-translate-y-1 hover:bg-red-100" aria-label="Remove from wishlist">
                     <Trash2 className="h-5 w-5" />

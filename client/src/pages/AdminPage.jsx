@@ -5,9 +5,10 @@ import {
   Edit3,
   ExternalLink,
   MessageSquareText,
+  MessageCircle,
   PackageCheck,
-  Plus,
   RefreshCw,
+  RotateCw,
   ShieldCheck,
   Star,
   Tag,
@@ -15,15 +16,17 @@ import {
   Truck,
   Users,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { resolveMediaUrl } from '../api/client'
 import {
   adminService,
   categoryService,
   couponService,
   orderService,
   productService,
+  returnRequestService,
   shiprocketService,
 } from '../api/services'
 import Button from '../components/Button'
@@ -42,6 +45,7 @@ const tabs = [
   ['coupons', ShieldCheck, 'Coupons'],
   ['users', Users, 'Users'],
   ['inquiries', MessageSquareText, 'Inquiries'],
+  ['returns', RotateCw, 'Returns'],
   ['reviews', Star, 'Reviews'],
 ]
 
@@ -105,6 +109,7 @@ export default function AdminPage() {
           {activeTab === 'coupons' && <CouponsPanel />}
           {activeTab === 'users' && <UsersPanel />}
           {activeTab === 'inquiries' && <InquiriesPanel />}
+          {activeTab === 'returns' && <ReturnsPanel />}
           {activeTab === 'reviews' && <ReviewsPanel />}
         </div>
       </div>
@@ -147,14 +152,19 @@ function DashboardPanel() {
 
   const stats = data?.stats || {}
   const monthlySales = data?.monthlySales || []
+  const dailySales = data?.dailySales || []
   const topProducts = data?.topSellingProducts || []
+  const lowStockProducts = data?.lowStockProducts || []
   const cards = [
     ['Users', stats.usersCount || 0, Users],
     ['Orders', stats.ordersCount || 0, PackageCheck],
     ['Revenue', formatPrice(stats.revenue || 0), BarChart3],
+    ['Avg. Order', formatPrice(stats.averageOrderValue || 0), BarChart3],
     ['Products', stats.productsCount || 0, Boxes],
     ['Pending Orders', stats.pendingOrders || 0, Truck],
     ['Paid Orders', stats.paidOrders || 0, ShieldCheck],
+    ['Open Returns', stats.openReturnRequests || 0, RotateCw],
+    ['Low Stock', stats.lowStockCount || 0, Boxes],
   ]
 
   return (
@@ -178,6 +188,14 @@ function DashboardPanel() {
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <DashboardDonut stats={stats} />
         <MonthlySalesChart sales={monthlySales} />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <DailySalesChart sales={dailySales} />
+        <StatusBreakdown title="Order Status" items={data?.orderStatusBreakdown || []} />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <StatusBreakdown title="Payment Status" items={data?.paymentStatusBreakdown || []} />
+        <LowStockPanel products={lowStockProducts} />
       </div>
       <TopProductsChart products={topProducts} />
       <Panel title="Recent Orders">
@@ -205,6 +223,78 @@ function DashboardPanel() {
         </Table>
       </Panel>
     </div>
+  )
+}
+
+function DailySalesChart({ sales }) {
+  const maxRevenue = Math.max(...sales.map((item) => item.revenue || 0), 1)
+
+  return (
+    <Panel title="Last 30 Days Revenue">
+      <div className="flex h-56 items-end gap-1 overflow-hidden rounded bg-brand-mist p-4">
+        {sales.length === 0 ? (
+          <div className="grid h-full w-full place-items-center text-sm font-bold text-slate-500">No paid sales in the last 30 days</div>
+        ) : (
+          sales.map((item) => {
+            const height = Math.max(((item.revenue || 0) / maxRevenue) * 100, 6)
+            const label = `${item._id?.day}/${item._id?.month}`
+            return (
+              <div key={`${item._id?.year}-${item._id?.month}-${item._id?.day}`} className="flex min-w-2 flex-1 flex-col items-center justify-end gap-2">
+                <div className="w-full rounded-t bg-brand-green" style={{ height: `${height}%` }} title={`${label}: ${formatPrice(item.revenue || 0)}`} />
+              </div>
+            )
+          })
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+function StatusBreakdown({ title, items }) {
+  const total = Math.max(items.reduce((sum, item) => sum + Number(item.count || 0), 0), 1)
+
+  return (
+    <Panel title={title}>
+      <div className="grid gap-3">
+        {items.length === 0 ? (
+          <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No data yet.</p>
+        ) : items.map((item) => {
+          const percent = Math.round((Number(item.count || 0) / total) * 100)
+          return (
+            <div key={item._id || 'unknown'} className="grid gap-2">
+              <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-600">
+                <span>{formatStatus(item._id || 'unknown')}</span>
+                <span>{item.count} · {percent}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded bg-brand-mist">
+                <div className="h-full rounded bg-brand-blue" style={{ width: `${percent}%` }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </Panel>
+  )
+}
+
+function LowStockPanel({ products }) {
+  return (
+    <Panel title="Low Stock Alerts">
+      {products.length === 0 ? (
+        <p className="rounded bg-green-50 p-4 text-sm font-bold text-brand-green">All active products have healthy stock.</p>
+      ) : (
+        <Table headers={['Product', 'SKU', 'Stock', 'Price']}>
+          {products.map((product) => (
+            <tr key={product._id}>
+              <Td>{product.name}</Td>
+              <Td>{product.sku || 'NA'}</Td>
+              <Td>{product.stock}</Td>
+              <Td>{formatPrice(product.price || 0)}</Td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Panel>
   )
 }
 
@@ -551,6 +641,27 @@ function OrdersPanel() {
     }
   }
 
+  const markPacked = async (order) => {
+    if (shipmentBusyRef.current) return
+    shipmentBusyRef.current = true
+    setShipmentBusy('packed')
+    try {
+      const response = await orderService.adminDelivery(order._id, {
+        deliveryStatus: 'packed',
+        message: 'Order packed and ready for courier pickup.',
+        location: 'BabyCure packing desk',
+      })
+      toast.success('Order marked packed')
+      setDetailsOrder(response.order || { ...order, deliveryStatus: 'packed' })
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      shipmentBusyRef.current = false
+      setShipmentBusy('')
+    }
+  }
+
   const runShipmentAction = async (order, action, successMessage) => {
     if (shipmentBusyRef.current) return
     shipmentBusyRef.current = true
@@ -586,6 +697,7 @@ function OrdersPanel() {
           onClose={() => setDetailsOrder(null)}
           onShipment={() => { setSelected(detailsOrder); setDetailsOrder(null) }}
           onShipmentAction={runShipmentAction}
+          onMarkPacked={markPacked}
         />
       )}
       {selected && (
@@ -635,16 +747,17 @@ function OrdersPanel() {
   )
 }
 
-function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction }) {
+function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction, onMarkPacked }) {
   const address = order.shippingAddress || {}
   const user = order.user || {}
   const itemsPrice = order.itemsPrice ?? order.orderItems?.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? 0
   const hasShipment = Boolean(order.shiprocketShipmentId)
   const hasAwb = Boolean(order.awbCode || order.trackingId)
+  const workflowSteps = getAdminOrderWorkflow(order)
 
   return (
     <Panel
-      title={`Complete Order Details - ${order.orderNumber}`}
+      title={`Order Details - ${order.orderNumber}`}
       action={
         <div className="flex flex-wrap gap-2">
           <Button
@@ -676,6 +789,13 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
             <Truck className="h-4 w-4" /> {busy === 'pickup' ? 'Scheduling...' : 'Schedule Pickup'}
           </Button>
           <Button
+            variant="outline"
+            disabled={Boolean(busy) || !hasAwb || order.deliveryStatus === 'packed'}
+            onClick={() => onMarkPacked(order)}
+          >
+            <PackageCheck className="h-4 w-4" /> {busy === 'packed' ? 'Saving...' : 'Mark Packed'}
+          </Button>
+          <Button
             variant="ghost"
             disabled={Boolean(busy) || !hasAwb}
             onClick={() => onShipmentAction(order, 'track', 'Shipment tracking synced')}
@@ -692,6 +812,46 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
         </div>
       }
     >
+      <div className="mb-5 rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Customer: {user.name || address.fullName || user.email || 'Customer'}</p>
+            <h3 className="mt-1 font-display text-2xl font-semibold text-brand-ink">{order.orderNumber}</h3>
+          </div>
+          <div className="grid gap-2 text-sm font-medium text-slate-600 sm:grid-cols-3">
+            <span className="rounded-full bg-brand-mist px-3 py-2">Order: {formatStatus(order.orderStatus)}</span>
+            <span className="rounded-full bg-brand-mist px-3 py-2">Payment: {formatStatus(order.paymentStatus)}</span>
+            <span className="rounded-full bg-brand-leaf px-3 py-2 text-brand-green">Total: {formatPrice(order.totalPrice || 0)}</span>
+          </div>
+        </div>
+      </div>
+
+      <AdminForwardShipmentGuide />
+
+      <div className="mb-5 overflow-hidden rounded-xl border border-sky-100 bg-white shadow-sm">
+        <div className="border-b border-sky-100 bg-[linear-gradient(135deg,#F3FBFF,#FFFFFF_55%,#F5FFF3)] px-4 py-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">Order Workflow</p>
+          <h3 className="mt-1 font-display text-xl font-semibold text-brand-ink">What To Do Next</h3>
+          <p className="mt-1 text-sm font-medium text-slate-500">Follow these stages from paid order to automatic Shiprocket tracking.</p>
+        </div>
+        <div className="grid gap-3 p-4 lg:grid-cols-4">
+          {workflowSteps.map((step, index) => (
+            <div key={step.key} className={`rounded-lg border p-3 ${step.done ? 'border-green-100 bg-green-50/80' : step.current ? 'border-sky-200 bg-sky-50' : 'border-slate-100 bg-slate-50'}`}>
+              <div className="flex items-start gap-3">
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black ${step.done ? 'bg-brand-green text-white' : step.current ? 'bg-brand-blue text-white' : 'bg-white text-slate-400'}`}>
+                  {step.done ? '✓' : index + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-display text-sm font-semibold text-brand-ink">{step.title}</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{step.help}</p>
+                  {step.value && <p className="mt-2 break-words rounded bg-white/80 px-2 py-1 text-xs font-semibold text-brand-blue">{step.value}</p>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid min-w-0 gap-4 xl:grid-cols-3 xl:gap-5">
         <AdminInfoCard title="Customer">
           <DetailLine label="Name" value={user.name || address.fullName || 'Customer'} />
@@ -737,7 +897,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
           <DetailLine label="Cancelled At" value={order.cancelledAt ? formatDate(order.cancelledAt) : 'Not cancelled'} />
         </AdminInfoCard>
 
-        <AdminInfoCard title="Delivery Tracking">
+        <AdminInfoCard title="Forward Shipment">
           <DetailLine label="Delivery Status" value={formatStatus(order.deliveryStatus || 'placed')} strong />
           <DetailLine label="Shiprocket Order" value={order.shiprocketOrderId || 'Not created'} />
           <DetailLine label="Shiprocket Shipment" value={order.shiprocketShipmentId || 'Not created'} />
@@ -757,7 +917,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
       </div>
 
       <div className="mt-5 rounded-md border border-sky-100 bg-brand-mist p-3 sm:p-4">
-        <h3 className="font-display text-xl font-black text-brand-ink">Ordered Products</h3>
+        <h3 className="font-display text-xl font-semibold text-brand-ink">Product Details</h3>
         <div className="mt-4 overflow-x-auto">
           <table className="mobile-card-table w-full min-w-full text-left text-sm md:min-w-[720px]">
             <thead>
@@ -790,17 +950,17 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
       </div>
 
       <div className="mt-5 rounded-md border border-slate-200 bg-white p-4">
-        <h3 className="font-display text-xl font-black text-brand-ink">Tracking History</h3>
+        <h3 className="font-display text-xl font-semibold text-brand-ink">Forward Tracking History</h3>
         <div className="mt-4 grid gap-3">
           {(order.trackingHistory || []).length === 0 ? (
-            <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No tracking history yet. Use Update Shipment to add delivery updates.</p>
+            <p className="rounded bg-brand-mist p-4 text-sm font-medium text-slate-500">No tracking history yet. Shiprocket webhook will add updates automatically after AWB movement.</p>
           ) : (
             order.trackingHistory.slice().reverse().map((history, index) => (
               <div key={`${history.status}-${history.updatedAt}-${index}`} className="rounded border border-sky-100 bg-brand-mist p-4">
-                <p className="font-display text-base font-black text-brand-ink">{formatStatus(history.status)}</p>
-                <p className="mt-1 text-sm font-semibold text-slate-600">{history.message}</p>
-                {history.location && <p className="mt-1 text-xs font-extrabold text-brand-blue">{history.location}</p>}
-                <p className="mt-2 text-xs font-bold text-slate-400">{formatDate(history.updatedAt)}</p>
+                <p className="font-display text-base font-semibold text-brand-ink">{formatStatus(history.status)}</p>
+                <p className="mt-1 text-sm font-medium text-slate-600">{history.message}</p>
+                {history.location && <p className="mt-1 text-xs font-semibold text-brand-blue">{history.location}</p>}
+                <p className="mt-2 text-xs font-medium text-slate-400">{formatDate(history.updatedAt)}</p>
               </div>
             ))
           )}
@@ -813,17 +973,112 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction 
 function AdminInfoCard({ title, children }) {
   return (
     <div className="min-w-0 rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h3 className="mb-4 font-display text-lg font-black text-brand-ink">{title}</h3>
+      <h3 className="mb-4 font-display text-lg font-semibold text-brand-ink">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
   )
 }
 
+function AdminForwardShipmentGuide() {
+  const steps = [
+    ['New paid order', 'Open View All, check customer address, phone number, products and payment status.'],
+    ['Ready to pack', 'Create shipment, assign AWB, generate label and keep products ready.'],
+    ['Packed', 'After label is printed and parcel is packed, click Mark Packed.'],
+    ['Pickup', 'Schedule pickup from Shiprocket and hand over parcel to courier.'],
+    ['Automatic tracking', 'After AWB, customer tracking page refreshes from Shiprocket automatically.'],
+  ]
+
+  return (
+    <div className="mb-5 rounded-lg border border-sky-100 bg-brand-mist p-4">
+      <h3 className="font-display text-lg font-semibold text-brand-ink">CRM Order Handling Guide</h3>
+      <div className="mt-3 grid gap-2 lg:grid-cols-5">
+        {steps.map(([title, copy], index) => (
+          <div key={title} className="rounded-md bg-white p-3">
+            <p className="text-xs font-semibold text-brand-blue">Step {index + 1}</p>
+            <p className="mt-1 text-sm font-semibold text-brand-ink">{title}</p>
+            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{copy}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function getAdminOrderWorkflow(order) {
+  const paid = order.paymentStatus === 'paid'
+  const shipment = Boolean(order.shiprocketShipmentId)
+  const awb = Boolean(order.awbCode || order.trackingId)
+  const label = Boolean(order.labelUrl)
+  const pickup = Boolean(order.pickupStatus)
+  const packed = ['packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'].includes(order.deliveryStatus)
+  const tracking = awb && Boolean(order.trackingHistory?.length || order.trackingSyncedAt)
+  const stages = [
+    {
+      key: 'paid',
+      title: 'Payment paid',
+      help: paid ? 'Payment is confirmed. Order can move to packing.' : 'Wait for Razorpay paid status before shipment.',
+      done: paid,
+      value: formatStatus(order.paymentStatus),
+    },
+    {
+      key: 'shipment',
+      title: 'Create Shiprocket shipment',
+      help: shipment ? 'Shiprocket shipment is created.' : 'Click Create Shipment to send order details to Shiprocket.',
+      done: shipment,
+      value: order.shiprocketShipmentId,
+    },
+    {
+      key: 'awb',
+      title: 'Assign AWB',
+      help: awb ? 'Courier and AWB are assigned.' : 'Click Assign AWB after shipment is created.',
+      done: awb,
+      value: order.awbCode || order.trackingId,
+    },
+    {
+      key: 'label',
+      title: 'Generate label',
+      help: label ? 'Label is ready to download and print.' : 'Generate label before final packing.',
+      done: label,
+      value: order.labelUrl ? 'Label ready' : '',
+    },
+    {
+      key: 'packed',
+      title: 'Mark packed',
+      help: packed ? 'Parcel is packed or already moved with courier.' : 'Click Mark Packed after label is on the parcel.',
+      done: packed,
+      value: formatStatus(order.deliveryStatus || 'placed'),
+    },
+    {
+      key: 'pickup',
+      title: 'Schedule pickup',
+      help: pickup ? 'Pickup has been requested.' : 'Schedule Shiprocket pickup after packing.',
+      done: pickup,
+      value: order.pickupStatus,
+    },
+    {
+      key: 'tracking',
+      title: 'Track automatically',
+      help: tracking ? 'Tracking updates are available from Shiprocket.' : 'After AWB, webhook and customer refresh will sync tracking.',
+      done: tracking,
+      value: order.courierName,
+    },
+    {
+      key: 'delivered',
+      title: 'Delivered',
+      help: order.deliveryStatus === 'delivered' ? 'Order completed.' : 'Final status comes from Shiprocket tracking.',
+      done: order.deliveryStatus === 'delivered',
+      value: order.estimatedDeliveryDate ? formatDate(order.estimatedDeliveryDate) : '',
+    },
+  ]
+  const firstPending = stages.findIndex((stage) => !stage.done)
+  return stages.map((stage, index) => ({ ...stage, current: index === firstPending }))
+}
+
 function DetailLine({ label, value, strong = false }) {
   return (
     <div className="grid gap-1 border-b border-slate-100 pb-2 last:border-0 sm:grid-cols-[140px_1fr]">
-      <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</span>
-      <span className={`min-w-0 break-words text-sm ${strong ? 'font-display text-lg font-black text-brand-blue' : 'font-semibold text-slate-700'}`}>
+      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</span>
+      <span className={`min-w-0 break-words text-sm ${strong ? 'font-display text-lg font-semibold text-brand-blue' : 'font-medium text-slate-700'}`}>
         {value || 'Not available'}
       </span>
     </div>
@@ -1061,6 +1316,285 @@ function InquiriesPanel() {
         </div>
       )}
     </Panel>
+  )
+}
+
+function ReturnsPanel() {
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await returnRequestService.adminAll()
+      setRequests(response.requests || [])
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const run = async (request, action, successMessage, payload) => {
+    const confirmations = {
+      approve: 'Approve this return/replacement request?',
+      reject: 'Reject this request?',
+      pickup: 'Create Shiprocket reverse pickup for this customer?',
+      received: 'Mark product received and verified by seller?',
+      refund: 'Initiate refund for this return?',
+      manualRefund: 'Mark manual refund as completed?',
+      replacement: 'Create replacement shipment for this request?',
+      delivered: 'Mark replacement delivered?',
+      close: 'Close this request?',
+    }
+    if (confirmations[action] && !window.confirm(confirmations[action])) return
+
+    setBusy(`${action}-${request._id}`)
+    try {
+      const actions = {
+        approve: returnRequestService.approve,
+        reject: returnRequestService.reject,
+        pickup: returnRequestService.createReturnPickup,
+        track: returnRequestService.trackReturn,
+        received: (id) => returnRequestService.updateStatus(id, { status: 'received_by_seller', message: 'Product received and verified by seller.' }),
+        refund: returnRequestService.initiateRefund,
+        manualRefund: (id) => returnRequestService.updateStatus(id, { status: 'refund_completed', message: 'Manual refund completed by seller.' }),
+        replacement: returnRequestService.createReplacementShipment,
+        delivered: (id) => returnRequestService.updateStatus(id, { status: 'replacement_delivered', message: 'Replacement delivered to customer.' }),
+        close: returnRequestService.close,
+      }
+      await actions[action](request._id, payload)
+      toast.success(successMessage)
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  if (loading) return <PageSkeleton />
+
+  return (
+    <Panel title="Return / Replacement Requests" action={<Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button>}>
+      <ReturnOperationsGuide />
+      {requests.length === 0 ? (
+        <p className="rounded bg-brand-mist p-4 text-sm font-bold text-slate-500">No return or replacement requests yet.</p>
+      ) : (
+        <div className="grid gap-5">
+          {requests.map((request) => (
+            <ReturnRequestAdminCard key={request._id} request={request} busy={busy} run={run} />
+          ))}
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+const requestStatusStyles = {
+  requested: 'bg-amber-50 text-amber-700 border-amber-100',
+  approved: 'bg-sky-50 text-brand-blue border-sky-100',
+  rejected: 'bg-red-50 text-red-600 border-red-100',
+  pickup_scheduled: 'bg-blue-50 text-blue-700 border-blue-100',
+  picked_up: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  received_by_seller: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  refund_initiated: 'bg-purple-50 text-purple-700 border-purple-100',
+  refund_completed: 'bg-green-50 text-brand-green border-green-100',
+  replacement_shipped: 'bg-blue-50 text-blue-700 border-blue-100',
+  replacement_delivered: 'bg-green-50 text-brand-green border-green-100',
+  closed: 'bg-slate-100 text-slate-600 border-slate-200',
+}
+
+const customerPhone = (request) => String(request.order?.shippingAddress?.phone || request.user?.phone || '').replace(/\D/g, '').slice(-10)
+const requestAwb = (request) => request.type === 'replacement' ? request.replacementAwbCode : request.returnAwbCode
+const requestCourier = (request) => request.type === 'replacement' ? request.replacementCourierName : request.returnCourierName
+const requestTrackingUrl = (request) => request.type === 'replacement' ? request.replacementTrackingUrl : request.returnTrackingUrl
+
+const buildReturnWhatsAppUrl = (request) => {
+  const phone = customerPhone(request)
+  const awb = requestAwb(request)
+  if (!phone || !awb) return ''
+
+  const message = [
+    `Hi ${request.user?.name || 'there'},`,
+    `Your BabyCure ${request.type} tracking is ready.`,
+    `Request: ${request.requestNumber}`,
+    `Order: ${request.order?.orderNumber || ''}`,
+    `Courier: ${requestCourier(request) || 'Assigned courier'}`,
+    `AWB: ${awb}`,
+    requestTrackingUrl(request) ? `Track here: ${requestTrackingUrl(request)}` : '',
+  ].filter(Boolean).join('\n')
+
+  return `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`
+}
+
+function ReturnOperationsGuide() {
+  const steps = [
+    ['1', 'Review request', 'Check product, reason, customer note and uploaded proof images.'],
+    ['2', 'Approve or reject', 'Approve only eligible damaged, wrong, missing, defective or expired cases.'],
+    ['3', 'Create reverse pickup', 'This sends customer address to Shiprocket and asks for a return pickup AWB.'],
+    ['4', 'Track automatically', 'Webhook updates return tracking. Use Track Return only if webhook is delayed.'],
+    ['5', 'Mark received', 'Click only after the returned product reaches seller and is verified.'],
+    ['6', 'Refund or replace', 'Refund after verification, or create replacement shipment for replacement cases.'],
+  ]
+
+  return (
+    <div className="mb-5 rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-xl font-semibold text-brand-ink">How To Manage Returns</h3>
+          <p className="mt-1 text-sm font-medium text-slate-500">Admin handles approval and verification. Shiprocket handles reverse pickup, AWB and tracking after pickup is created.</p>
+        </div>
+        <span className="rounded-full bg-brand-leaf px-3 py-1 text-xs font-semibold text-brand-green">Automatic after AWB</span>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {steps.map(([number, title, copy]) => (
+          <div key={number} className="rounded-md border border-sky-100 bg-brand-mist p-3">
+            <div className="flex items-center gap-2">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-blue text-xs font-semibold text-white">{number}</span>
+              <p className="font-semibold text-brand-ink">{title}</p>
+            </div>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{copy}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+        If AWB is not assigned, check Shiprocket pickup address, serviceability, courier availability and wallet balance. Then click Create Reverse Pickup again to retry AWB assignment for the existing return shipment.
+      </p>
+    </div>
+  )
+}
+
+function ReturnRequestAdminCard({ request, busy, run }) {
+  const awb = requestAwb(request)
+  const courier = requestCourier(request)
+  const trackingUrl = requestTrackingUrl(request)
+  const whatsappUrl = buildReturnWhatsAppUrl(request)
+  const statusClass = requestStatusStyles[request.status] || 'bg-slate-50 text-slate-600 border-slate-100'
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-display text-lg font-semibold text-brand-ink">{request.requestNumber}</p>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              {formatStatus(request.type)} for {request.order?.orderNumber} by {request.user?.name || request.user?.email || 'Customer'}
+            </p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClass}`}>{formatStatus(request.status)}</span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-4">
+          <div className="rounded-md border border-slate-100 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Request Details</p>
+            <p className="mt-3 text-sm font-semibold text-slate-700">Reason: {formatStatus(request.reason)}</p>
+            {(request.items || []).map((item) => (
+              <p key={`${request._id}-${item.product}`} className="mt-2 text-sm text-slate-600">{item.name} x {item.quantity}</p>
+            ))}
+            {request.details && <p className="mt-3 rounded bg-brand-mist p-3 text-sm leading-6 text-slate-600">{request.details}</p>}
+          </div>
+
+          {request.images?.length > 0 && (
+            <div className="rounded-md border border-slate-100 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Customer Evidence</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {request.images.map((image) => (
+                  <a key={image.url} href={resolveMediaUrl(image.url)} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                    <img src={resolveMediaUrl(image.url)} alt="Return evidence" className="h-20 w-20 object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid content-start gap-4">
+          <div className="rounded-md border border-slate-100 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Shiprocket Tracking</p>
+            <div className="mt-3 grid gap-2 text-sm text-slate-600">
+              <p><span className="font-semibold text-brand-ink">Courier:</span> {courier || 'Not assigned yet'}</p>
+              <p><span className="font-semibold text-brand-ink">AWB:</span> {awb || 'Not assigned yet'}</p>
+              <p><span className="font-semibold text-brand-ink">Pickup:</span> {request.returnPickupStatus || 'Not scheduled yet'}</p>
+              <p><span className="font-semibold text-brand-ink">Shipment:</span> {formatStatus(request.returnShipmentStatus || request.replacementShipmentStatus || request.status)}</p>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {trackingUrl && (
+                <a href={trackingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-brand-blue">
+                  Track <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+              {whatsappUrl && (
+                <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-brand-green">
+                  Send WhatsApp <MessageCircle className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-slate-100 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Admin Actions</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="outline" disabled={Boolean(busy)} onClick={() => run(request, 'approve', 'Request approved')}>Approve</Button>
+              <Button variant="ghost" disabled={Boolean(busy)} onClick={() => run(request, 'reject', 'Request rejected', { message: 'Request rejected by admin.' })}>Reject</Button>
+              <Button variant="outline" disabled={Boolean(busy)} onClick={() => run(request, 'pickup', 'Reverse pickup created')}>Create Reverse Pickup</Button>
+              <Button variant="ghost" disabled={Boolean(busy) || !request.returnAwbCode} onClick={() => run(request, 'track', 'Return tracking synced')}>Track Return</Button>
+              <Button variant="outline" disabled={Boolean(busy)} onClick={() => run(request, 'received', 'Marked received')}>Mark Received</Button>
+              {request.type !== 'return' && (
+                <>
+                  <Button variant="green" disabled={Boolean(busy)} onClick={() => run(request, 'replacement', 'Replacement shipment created')}>Replacement Ship</Button>
+                  <Button variant="outline" disabled={Boolean(busy)} onClick={() => run(request, 'delivered', 'Replacement delivered')}>Delivered</Button>
+                </>
+              )}
+              <Button variant="ghost" disabled={Boolean(busy)} onClick={() => run(request, 'close', 'Request closed')}>Close</Button>
+            </div>
+          </div>
+
+          {request.type === 'return' ? (
+            <div className="rounded-md border border-slate-100 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Refund</p>
+              <div className="mt-3 grid gap-2 text-sm text-slate-600">
+                <p><span className="font-semibold text-brand-ink">Amount:</span> {formatPrice(request.refundAmount || request.order?.totalPrice || 0)}</p>
+                <p><span className="font-semibold text-brand-ink">Method:</span> {request.order?.paymentMethod === 'ONLINE' ? 'Razorpay' : 'Manual UPI / Bank / Store Credit'}</p>
+                <p><span className="font-semibold text-brand-ink">Status:</span> {formatStatus(request.status)}</p>
+                <p><span className="font-semibold text-brand-ink">Razorpay Refund:</span> {request.razorpayRefundId || 'Not initiated'}</p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button variant="green" disabled={Boolean(busy) || !['received_by_seller', 'refund_initiated'].includes(request.status)} onClick={() => run(request, 'refund', 'Refund initiated', { amount: request.order?.totalPrice })}>Initiate Refund</Button>
+                <Button variant="outline" disabled={Boolean(busy) || !['received_by_seller', 'refund_initiated'].includes(request.status)} onClick={() => run(request, 'manualRefund', 'Manual refund completed')}>Mark Manual Refund Completed</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-slate-100 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Replacement Shipment</p>
+              <div className="mt-3 grid gap-2 text-sm text-slate-600">
+                <p><span className="font-semibold text-brand-ink">Return AWB:</span> {request.returnAwbCode || 'Not assigned yet'}</p>
+                <p><span className="font-semibold text-brand-ink">Replacement AWB:</span> {request.replacementAwbCode || 'Not assigned yet'}</p>
+                <p><span className="font-semibold text-brand-ink">Courier:</span> {request.replacementCourierName || 'Not assigned yet'}</p>
+                <p><span className="font-semibold text-brand-ink">Status:</span> {formatStatus(request.replacementShipmentStatus || request.status)}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
+        <div className="grid gap-2">
+          {(request.statusHistory || []).slice().reverse().map((history, index) => (
+            <p key={`${history.status}-${index}`} className="text-xs font-medium text-slate-600">
+              <span className="font-semibold text-brand-ink">{formatStatus(history.status)}</span> - {history.message} ({formatDate(history.updatedAt)})
+            </p>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 

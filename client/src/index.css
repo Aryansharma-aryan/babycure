@@ -233,6 +233,10 @@ img {
   background: #ffffff;
 }
 
+.mobile-filter-sheet {
+  animation: mobile-filter-sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .baby-splash {
   animation: baby-splash-out 220ms ease 1.78s both;
 }
@@ -280,6 +284,18 @@ img {
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes mobile-filter-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

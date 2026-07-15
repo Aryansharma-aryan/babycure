@@ -56,7 +56,7 @@ export default function ProductDetailsPage() {
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to add products to cart')
+      toast.error('Please login to add products to your bag')
       navigate('/login')
       return
     }
@@ -126,7 +126,7 @@ export default function ProductDetailsPage() {
             <p className={`mt-2 text-sm font-bold ${product.stock > 5 ? 'text-brand-green' : 'text-red-500'}`}>{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</p>
           </div>
           <div className="mt-7 flex flex-wrap gap-4">
-            <Button onClick={handleAdd} disabled={!product.stock}>Add to Cart</Button>
+            <Button onClick={handleAdd} disabled={!product.stock}>Add to Bag</Button>
             <Button variant="green" onClick={handleBuyNow} disabled={!product.stock}>Buy Now</Button>
             <Button
               variant="ghost"

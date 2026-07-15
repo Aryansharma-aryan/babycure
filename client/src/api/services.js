@@ -9,6 +9,7 @@ export const authService = {
   verifyPhoneOtp: (payload) => api.post('/auth/verify-phone-otp', payload),
   sendPasswordResetOtp: (payload) => api.post('/auth/password/forgot', payload),
   resetPassword: (payload) => api.post('/auth/password/reset', payload),
+  updateProfile: (payload) => api.patch('/auth/me', payload),
 }
 
 export const categoryService = {
@@ -50,6 +51,7 @@ export const orderService = {
   mine: () => api.get('/orders/my-orders'),
   get: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.patch(`/orders/${id}/cancel`),
+  invoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
   tracking: (id) => api.get(`/orders/${id}/tracking`),
   adminAll: () => api.get('/orders/admin/all'),
   adminStatus: (id, payload) => api.patch(`/orders/admin/${id}/status`, payload),
@@ -67,6 +69,21 @@ export const shiprocketService = {
 export const paymentService = {
   createRazorpayOrder: (payload) => api.post('/payments/razorpay/order', payload),
   verifyRazorpayPayment: (payload) => api.post('/payments/razorpay/verify', payload),
+}
+
+export const returnRequestService = {
+  mine: (params) => api.get(`/returns/my-requests${buildQuery(params)}`),
+  createReturn: (orderId, payload) => api.post(`/returns/orders/${orderId}/return`, payload, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  createReplacement: (orderId, payload) => api.post(`/returns/orders/${orderId}/replacement`, payload, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  adminAll: (params) => api.get(`/returns/admin/all${buildQuery(params)}`),
+  updateStatus: (id, payload) => api.patch(`/returns/admin/${id}/status`, payload),
+  approve: (id, payload) => api.patch(`/returns/admin/${id}/approve`, payload),
+  reject: (id, payload) => api.patch(`/returns/admin/${id}/reject`, payload),
+  close: (id, payload) => api.patch(`/returns/admin/${id}/close`, payload),
+  createReturnPickup: (id) => api.post(`/returns/admin/${id}/return-pickup`),
+  trackReturn: (id) => api.get(`/returns/admin/${id}/track-return`),
+  initiateRefund: (id, payload) => api.post(`/returns/admin/${id}/refund`, payload),
+  createReplacementShipment: (id) => api.post(`/returns/admin/${id}/replacement-shipment`),
 }
 
 export const wishlistService = {

@@ -1,6 +1,5 @@
 import {
   Baby,
-  Gift,
   Heart,
   Leaf,
   PackageCheck,
@@ -31,9 +30,7 @@ export const categories = [
   { id: 'skin-care', title: 'Skin Care', icon: Leaf },
   { id: 'diapering', title: 'Diapering', icon: PackageCheck },
   { id: 'feeding', title: 'Feeding', icon: Baby },
-  { id: 'toys', title: 'Toys & Accessories', icon: Heart },
   { id: 'health', title: 'Health & Safety', icon: ShieldCheck },
-  { id: 'gift-sets', title: 'Gift Sets', icon: Gift },
 ]
 
 export const products = [

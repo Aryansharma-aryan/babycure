@@ -12,6 +12,16 @@ export const api = axios.create({
   },
 })
 
+export const resolveMediaUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:')) return url
+  const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, '')
+  const normalized = String(url).replace(/\\/g, '/')
+  const uploadIndex = normalized.indexOf('/uploads/')
+  if (uploadIndex >= 0) return `${apiOrigin}${normalized.slice(uploadIndex)}`
+  return `${apiOrigin}${normalized.startsWith('/') ? normalized : `/${normalized}`}`
+}
+
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {

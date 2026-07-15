@@ -1,4 +1,4 @@
-import { Heart, MessageSquareText, ShoppingCart } from 'lucide-react'
+import { Heart, ShoppingBag } from 'lucide-react'
 import { memo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
@@ -7,8 +7,21 @@ import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
 import { getProductId, getProductImage } from '../utils/products'
-import ProductArt from './ProductArt'
 import Rating from './Rating'
+import babycureProductVisual from '../assets/babycure-hero-products.png'
+import babycureCareVisual from '../assets/babycure-hero-ai.png'
+import shampooVisual from '../assets/about-products-promise.png'
+import lotionVisual from '../assets/heroo.png'
+import bathVisual from '../assets/about-mother-baby-care.png'
+
+const visualAssets = {
+  pump: { src: shampooVisual, position: '42% 64%', size: 'cover' },
+  lotion: { src: lotionVisual, position: '72% 68%', size: 'cover' },
+  tube: { src: babycureCareVisual, position: '96% 76%', size: '300%' },
+  wipes: { src: babycureProductVisual, position: '82% 72%', size: '300%' },
+  spray: { src: babycureCareVisual, position: '75% 76%', size: '300%' },
+  powder: { src: bathVisual, position: '20% 74%', size: '300%' },
+}
 
 function ProductCard({ product }) {
   const { addToCart } = useCart()
@@ -20,10 +33,15 @@ function ProductCard({ product }) {
   const rating = product.ratingsAverage || product.rating || 0
   const reviews = product.ratingsQuantity || product.reviews || 0
   const mrp = product.mrp || product.oldPrice || product.price
+  const saving = mrp > product.price ? Math.round(((mrp - product.price) / mrp) * 100) : 0
+  const normalizedName = product.name?.toLowerCase() || ''
+  const visualType = product.type
+    || (normalizedName.includes('wipe') ? 'wipes' : normalizedName.includes('oil') ? 'spray' : normalizedName.includes('lotion') ? 'lotion' : normalizedName.includes('cream') ? 'tube' : normalizedName.includes('powder') ? 'powder' : 'pump')
+  const visual = visualAssets[visualType] || visualAssets.pump
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to add products to cart')
+      toast.error('Please login to add products to your bag')
       navigate('/login')
       return
     }
@@ -52,50 +70,17 @@ function ProductCard({ product }) {
   }
 
   return (
-    <article className="group overflow-hidden rounded-[1.2rem] border border-sky-100 bg-white shadow-[0_18px_55px_rgba(74,166,217,0.10)] transition duration-300 hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-[0_28px_85px_rgba(74,166,217,0.18)]">
+    <article className="group relative overflow-hidden rounded-[1.1rem] border border-slate-200/90 bg-white transition duration-300 hover:-translate-y-1 hover:border-brand-blue/35 hover:shadow-[0_20px_50px_rgba(23,50,77,0.12)] sm:rounded-none">
       <Link to={`/product/${productId}`} className="block">
-        <div className="relative grid h-72 place-items-center overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.95),transparent_9rem),linear-gradient(135deg,#eaf8ff,#f6fff4_45%,#fff3d8)]">
-          <span className="absolute left-0 top-0 rounded-br-xl bg-white/92 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-brand-green shadow-[0_10px_24px_rgba(124,197,118,0.14)]">
-            {product.isFeatured ? 'Bestseller ★' : 'Babycure ★'}
-          </span>
-          {image ? (
-            <img src={image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
-          ) : (
-            <ProductArt type={product.type} color={product.color} />
-          )}
+        <div className="relative grid h-44 place-items-center overflow-hidden bg-[radial-gradient(circle_at_50%_30%,#fff_0%,#f4fafc_57%,#eaf7fb_100%)] sm:h-64 lg:h-80">
+          <span className="absolute left-0 top-0 z-10 bg-brand-ink px-2 py-1 text-[8px] font-extrabold uppercase tracking-[0.11em] text-white sm:px-3 sm:py-1.5 sm:text-[10px]">{product.isFeatured ? 'Best seller' : product.tag || 'BabyCure care'}</span>
+          {saving > 0 && <span className="absolute right-2 top-2 z-10 bg-white px-2 py-1 text-[8px] font-extrabold text-brand-green shadow-sm sm:right-3 sm:top-3 sm:px-2.5 sm:text-[10px]">Save {saving}%</span>}
+          {image ? <img src={image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" /> : <div role="img" aria-label={`${product.name} BabyCure product visual`} className="h-full w-full bg-no-repeat transition duration-500 group-hover:scale-105" style={{ backgroundImage: `url(${visual.src})`, backgroundPosition: visual.position, backgroundSize: visual.size }} />}
         </div>
-        <div className="px-4 pt-4">
-          <span className="rounded-md bg-brand-mist px-2 py-1 text-[11px] font-extrabold text-brand-ink">All Baby Types</span>
-          <h3 className="mt-3 min-h-12 text-[15px] font-black leading-snug text-brand-ink">{product.name}</h3>
-        </div>
+        <div className="px-3 pt-3 sm:px-5 sm:pt-5"><p className="hidden text-[10px] font-extrabold uppercase tracking-[.13em] text-brand-green sm:block">BabyCure essentials</p><h3 className="min-h-[2.65rem] text-[13px] font-extrabold leading-snug text-brand-ink sm:mt-2 sm:min-h-12 sm:text-[15px]">{product.name}</h3></div>
       </Link>
-      <div className="mt-2 flex items-center justify-between gap-3 px-4">
-        <div>
-          <p className="text-lg font-black text-brand-ink">{formatPrice(product.price)}</p>
-          <p className="text-xs font-bold text-slate-400 line-through">{formatPrice(mrp)}</p>
-        </div>
-        <Link to={`/product/${productId}#reviews`} className="rounded-full px-2 py-1 transition hover:bg-amber-50" aria-label={`Read or write reviews for ${product.name}`}>
-          <Rating rating={rating} reviews={reviews} />
-        </Link>
-      </div>
-      <div className="px-4 pt-3">
-        <Link to={`/product/${productId}#reviews`} className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-4 py-2.5 text-sm font-black text-amber-700 transition hover:-translate-y-0.5 hover:border-amber-200 hover:bg-amber-100">
-          <MessageSquareText className="h-4 w-4" /> Rate & Review
-        </Link>
-      </div>
-      <div className="grid grid-cols-[1fr_46px] gap-2 p-4">
-        <button
-          className="flex items-center justify-center gap-2 rounded-full bg-brand-blue px-4 py-3 text-sm font-black text-white shadow-[0_16px_38px_rgba(74,166,217,0.24)] transition duration-300 hover:-translate-y-1 hover:bg-sky-500 hover:shadow-[0_22px_54px_rgba(74,166,217,0.30)] active:translate-y-0 disabled:opacity-60"
-          type="button"
-          disabled={busy || product.stock === 0}
-          onClick={handleAdd}
-        >
-          {product.stock === 0 ? 'Out of Stock' : busy ? 'Adding...' : 'Add to Cart'} <ShoppingCart className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={handleWishlist} className="grid h-[46px] place-items-center rounded-full border border-green-100 bg-green-50 text-brand-green shadow-[0_12px_30px_rgba(124,197,118,0.10)] transition duration-300 hover:-translate-y-1 hover:bg-brand-leaf hover:shadow-[0_18px_44px_rgba(124,197,118,0.18)]" aria-label="Add to wishlist">
-          <Heart className="h-5 w-5" />
-        </button>
-      </div>
+      <div className="mt-2 flex items-center justify-between gap-2 px-3 sm:mt-3 sm:gap-3 sm:px-5"><div><p className="text-base font-extrabold text-brand-ink sm:text-lg">{formatPrice(product.price)} {mrp > product.price && <span className="ml-1 hidden text-xs font-semibold text-slate-400 line-through sm:inline">{formatPrice(mrp)}</span>}</p></div><Link to={`/product/${productId}#reviews`} className="hidden rounded-sm bg-[#fff8e7] px-2 py-1 transition hover:bg-amber-100 sm:block" aria-label={`Read or write reviews for ${product.name}`}><Rating rating={rating} reviews={reviews} /></Link></div>
+      <div className="grid grid-cols-[1fr_36px] gap-2 p-3 sm:grid-cols-[1fr_44px] sm:p-5"><button className="flex items-center justify-center gap-1.5 bg-brand-ink px-2 py-2.5 text-[11px] font-extrabold text-white transition duration-300 hover:bg-brand-blue disabled:opacity-60 sm:gap-2 sm:px-4 sm:py-3 sm:text-sm" type="button" disabled={busy || product.stock === 0} onClick={handleAdd}>{product.stock === 0 ? 'Out of stock' : busy ? 'Adding...' : <><span className="sm:hidden">Add</span><span className="hidden sm:inline">Add to bag</span></>} <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></button><button type="button" onClick={handleWishlist} className="grid h-10 place-items-center border border-slate-200 bg-white text-brand-ink transition hover:border-brand-green hover:bg-brand-leaf hover:text-brand-green sm:h-[44px]" aria-label="Add to wishlist"><Heart className="h-4 w-4 sm:h-5 sm:w-5" /></button></div>
     </article>
   )
 }

@@ -91,6 +91,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 border-t border-white/15 px-4 py-5 text-sm font-semibold text-blue-100">
         <span>2026 Babycure. All rights reserved.</span>
         <div className="flex flex-wrap items-center gap-4 sm:ml-auto">
+          <span className="font-black text-white">Follow Us on</span>
           <div className="flex items-center gap-2" aria-label="Babycure social links">
             <BrandSocialIcon label="Facebook" href={contactDetails.facebook}>f</BrandSocialIcon>
             <BrandSocialIcon label="Pinterest" href={contactDetails.pinterest}>P</BrandSocialIcon>

@@ -1,10 +1,9 @@
-import { Check, Clock, ExternalLink, Package, RotateCw, Truck } from 'lucide-react'
+import { Check, Clock, ExternalLink, MapPin, Package, RotateCw, Truck } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { orderService } from '../api/services'
 import Button from '../components/Button'
-import PageHeader from '../components/PageHeader'
 import { PageSkeleton } from '../components/Skeleton'
 import { useAuth } from '../hooks/useAuth'
 import { formatDate, formatStatus } from './MyOrdersPage'
@@ -74,44 +73,35 @@ export default function OrderTrackingPage() {
 
   if (loading || authLoading || !tracking) return <PageSkeleton />
 
+  const currentStatus = tracking.deliveryStatus || tracking.orderStatus || 'placed'
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
-      <PageHeader eyebrow="Live Tracking" title={tracking.orderNumber} copy="Auto-refreshes every 15 seconds so users see delivery updates quickly." backTo="/orders" backLabel="Back to orders" />
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-sky-100 bg-white p-4 shadow-soft">
-        <div className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-mist text-brand-blue"><Truck className="h-6 w-6" /></span>
-          <div>
-            <p className="font-display text-xl font-extrabold text-brand-ink">{formatStatus(tracking.deliveryStatus || tracking.orderStatus)}</p>
-            <p className="text-sm font-semibold text-slate-500">Last refresh: {lastUpdated ? formatDate(lastUpdated) : 'Just now'}</p>
+    <section className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-7">
+      <CompactOrderHeader eyebrow="Live Tracking" title={tracking.orderNumber} copy="Shipment updates sync automatically from Shiprocket." backTo="/orders" backLabel="Back to orders" />
+
+      <div className="mb-4 rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-mist text-brand-blue"><Truck className="h-5 w-5" /></span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Current status</p>
+              <h2 className="mt-1 font-display text-2xl font-semibold text-brand-ink">{formatStatus(currentStatus)}</h2>
+              <p className="mt-1 text-xs font-medium text-slate-500">Last refresh: {lastUpdated ? formatDate(lastUpdated) : 'Just now'}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tracking.trackingUrl && (
+              <a href={tracking.trackingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white">
+                Courier Website <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
+            <Button variant="ghost" onClick={() => loadTracking(false)} className="rounded-full"><RotateCw className="h-4 w-4" /> Refresh</Button>
           </div>
         </div>
-        <Button variant="ghost" onClick={() => loadTracking(false)} className="rounded-full"><RotateCw className="h-4 w-4" /> Refresh Now</Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-[2rem] border border-sky-100 bg-white p-6 shadow-soft">
-          <h2 className="font-display text-2xl font-extrabold text-brand-ink">Shipment Journey</h2>
-          <div className="mt-8 space-y-0">
-            {steps.map((step, index) => {
-              const completed = index <= activeRank
-              return (
-                <div key={step.key} className="grid grid-cols-[44px_1fr] gap-4">
-                  <div className="grid justify-center">
-                    <span className={`grid h-11 w-11 place-items-center rounded-full border-2 ${completed ? 'border-brand-green bg-brand-green text-white' : 'border-sky-100 bg-sky-50 text-slate-400'}`}>
-                      {completed ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
-                    </span>
-                    {index < steps.length - 1 && <span className={`mx-auto h-12 w-1 ${index < activeRank ? 'bg-brand-green' : 'bg-sky-100'}`} />}
-                  </div>
-                  <div className="pb-8">
-                    <p className="font-display text-lg font-extrabold text-brand-ink">{step.label}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-500">{completed ? 'Completed or in progress' : 'Waiting for Shiprocket update'}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
+      <div className="grid gap-4 lg:grid-cols-[1fr_330px]">
+        <ShipmentJourney activeRank={activeRank} />
         <aside className="space-y-5">
           <TrackingInfo tracking={tracking} />
           <TrackingHistory history={tracking.trackingHistory || []} />
@@ -121,17 +111,92 @@ export default function OrderTrackingPage() {
   )
 }
 
+function CompactOrderHeader({ eyebrow, title, copy, backTo, backLabel }) {
+  return (
+    <div className="mb-5">
+      <Link to={backTo} className="inline-flex items-center rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-brand-blue shadow-sm">{backLabel}</Link>
+      <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-green">{eyebrow}</p>
+      <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-brand-ink sm:text-4xl">{title}</h1>
+      <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-slate-600">{copy}</p>
+    </div>
+  )
+}
+
+function ShipmentJourney({ activeRank }) {
+  const safeRank = Math.max(0, Math.min(activeRank, steps.length - 1))
+  const progress = (safeRank / (steps.length - 1)) * 100
+
+  return (
+    <div className="rounded-lg border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-brand-ink">Shipment Journey</h2>
+          <p className="mt-1 text-sm font-medium text-slate-500">Step-by-step delivery progress.</p>
+        </div>
+        <span className="rounded-full bg-brand-leaf px-3 py-1 text-xs font-semibold text-brand-green">{Math.min(activeRank + 1, steps.length)} of {steps.length}</span>
+      </div>
+
+      <div className="mt-6 hidden md:block">
+        <div className="relative px-3">
+          <div className="absolute left-8 right-8 top-4 h-1 rounded-full bg-slate-100" />
+          <div className="absolute left-8 top-4 h-1 rounded-full bg-brand-green transition-all duration-500" style={{ width: `calc((100% - 4rem) * ${progress / 100})` }} />
+          <div className="relative grid grid-cols-7 gap-2">
+            {steps.map((step, index) => {
+              const completed = index <= safeRank
+              const active = index === safeRank
+              return (
+                <div key={step.key} className="grid justify-items-center gap-2">
+                  <span className={`grid h-9 w-9 place-items-center rounded-full border-2 text-xs transition ${completed ? 'border-brand-green bg-brand-green text-white' : 'border-slate-200 bg-white text-slate-400'} ${active ? 'shadow-[0_0_0_5px_rgba(124,197,118,0.16)]' : ''}`}>
+                    {completed ? <Check className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <span className={`max-w-[92px] text-center text-xs font-semibold leading-4 ${completed ? 'text-brand-ink' : 'text-slate-400'}`}>{step.label}</span>
+                  <span className={`text-[11px] font-medium ${active ? 'text-brand-green' : completed ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {active ? 'Current' : completed ? 'Done' : 'Pending'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 md:hidden">
+        {steps.map((step, index) => {
+          const completed = index <= safeRank
+          const active = index === safeRank
+          return (
+            <div key={step.key} className="grid grid-cols-[34px_1fr] gap-3">
+              <div className="grid justify-center">
+                <span className={`grid h-8 w-8 place-items-center rounded-full border ${completed ? 'border-brand-green bg-brand-green text-white' : 'border-slate-200 bg-white text-slate-400'}`}>
+                  {completed ? <Check className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                </span>
+                {index < steps.length - 1 && <span className={`mx-auto h-9 w-px ${index < activeRank ? 'bg-brand-green' : 'bg-slate-200'}`} />}
+              </div>
+              <div className="pb-5">
+                <div className={`rounded-md border px-3 py-2 ${completed ? 'border-green-100 bg-green-50/70' : 'border-slate-100 bg-slate-50'}`}>
+                  <p className="font-display text-base font-semibold text-brand-ink">{step.label}</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">{active ? 'Current update' : completed ? 'Completed' : 'Waiting for update'}</p>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function TrackingInfo({ tracking }) {
   return (
-    <div className="rounded-[1.6rem] border border-sky-100 bg-white p-5 shadow-soft">
-      <h3 className="font-display text-xl font-extrabold text-brand-ink">Courier Details</h3>
-      <div className="mt-4 space-y-3 text-sm font-semibold text-slate-600">
-        <p>Courier: <span className="font-extrabold text-brand-ink">{tracking.courierName || 'Will update soon'}</span></p>
-        <p>AWB Number: <span className="font-extrabold text-brand-ink">{tracking.awbCode || tracking.trackingId || 'Not assigned yet'}</span></p>
-        <p>Estimated Delivery: <span className="font-extrabold text-brand-ink">{tracking.estimatedDeliveryDate ? formatDate(tracking.estimatedDeliveryDate) : 'Will update soon'}</span></p>
+    <div className="rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
+      <h3 className="font-display text-lg font-semibold text-brand-ink">Courier Details</h3>
+      <div className="mt-3 grid gap-2 text-sm font-medium text-slate-600">
+        <InfoRow label="Courier" value={tracking.courierName || 'Will update soon'} />
+        <InfoRow label="AWB Number" value={tracking.awbCode || tracking.trackingId || 'Not assigned yet'} />
+        <InfoRow label="Estimated Delivery" value={tracking.estimatedDeliveryDate ? formatDate(tracking.estimatedDeliveryDate) : 'Will update soon'} />
       </div>
       {tracking.trackingUrl && (
-        <Link to={tracking.trackingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-extrabold text-white">
+        <Link to={tracking.trackingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white">
           Track on Courier Website <ExternalLink className="h-4 w-4" />
         </Link>
       )}
@@ -139,23 +204,32 @@ function TrackingInfo({ tracking }) {
   )
 }
 
+function InfoRow({ label, value }) {
+  return (
+    <div className="rounded-md bg-brand-mist px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</p>
+      <p className="mt-1 break-words font-semibold text-brand-ink">{value}</p>
+    </div>
+  )
+}
+
 function TrackingHistory({ history }) {
   return (
-    <div className="rounded-[1.6rem] border border-sky-100 bg-white p-5 shadow-soft">
-      <h3 className="font-display text-xl font-extrabold text-brand-ink">Tracking History</h3>
-      <div className="mt-5 space-y-4">
+    <div className="rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
+      <h3 className="font-display text-lg font-semibold text-brand-ink">Tracking History</h3>
+      <div className="mt-4 space-y-3">
         {history.length === 0 ? (
-          <div className="rounded-2xl bg-sky-50 p-4 text-sm font-semibold text-slate-500">
+          <div className="rounded-lg bg-sky-50 p-4 text-sm font-medium text-slate-500">
             <Package className="mb-2 h-5 w-5 text-brand-blue" />
             Tracking history will appear after Shiprocket sends the first shipment update.
           </div>
         ) : (
           history.slice().reverse().map((item, index) => (
-            <div key={`${item.status}-${item.updatedAt}-${index}`} className="rounded-2xl bg-sky-50/70 p-4">
-              <p className="font-display text-base font-extrabold text-brand-ink">{formatStatus(item.status)}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-600">{item.message}</p>
-              {item.location && <p className="mt-1 text-xs font-bold text-brand-blue">{item.location}</p>}
-              <p className="mt-2 text-xs font-bold text-slate-400">{formatDate(item.updatedAt)}</p>
+            <div key={`${item.status}-${item.updatedAt}-${index}`} className="rounded-lg border border-sky-100 bg-sky-50/70 p-3">
+              <p className="font-display text-sm font-semibold text-brand-ink">{formatStatus(item.status)}</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">{item.message}</p>
+              {item.location && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-blue"><MapPin className="h-3.5 w-3.5" /> {item.location}</p>}
+              <p className="mt-2 text-xs font-medium text-slate-400">{formatDate(item.updatedAt)}</p>
             </div>
           ))
         )}

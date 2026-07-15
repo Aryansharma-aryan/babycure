@@ -6,7 +6,7 @@ const welcomeToasts = [
   { text: 'Try our Gentle Baby Wash for soft everyday cleansing' },
   { text: 'Natural lotion, wipes and diaper care made for delicate skin' },
   { text: 'Special baby-care bundle offers are available today' },
-  { text: 'Add your favourites to cart and checkout smoothly' },
+  { text: 'Add your favourites to your bag and checkout smoothly' },
 ]
 
 export default function ToastManager() {

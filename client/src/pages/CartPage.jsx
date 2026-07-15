@@ -9,9 +9,9 @@ export default function CartPage() {
 
   return (
     <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
-      <PageHeader eyebrow="Cart" title="Your Cart" copy="Review products, quantity and delivery savings before checkout." backTo="/category" backLabel="Continue shopping" />
+      <PageHeader eyebrow="Shopping bag" title="Your Bag" copy="Review products, quantity and delivery savings before checkout." backTo="/category" backLabel="Continue shopping" />
       {loading ? (
-        <div className="rounded-md border border-slate-200 bg-white p-8 text-center font-black text-brand-blue shadow-soft">Loading your cart...</div>
+        <div className="rounded-md border border-slate-200 bg-white p-8 text-center font-black text-brand-blue shadow-soft">Loading your bag...</div>
       ) : items.length === 0 ? (
         <EmptyCart />
       ) : (

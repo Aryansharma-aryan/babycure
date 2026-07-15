@@ -4,6 +4,8 @@ export function getProductId(product) {
 
 export function getProductImage(product) {
   const source = product?.images?.[0]?.url || product?.productImage || product?.image || ''
+  // Demo seed data used generic stock images. Do not present them as BabyCure products.
+  if (source.includes('images.unsplash.com')) return ''
   return source
 }
 

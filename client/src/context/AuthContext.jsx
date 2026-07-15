@@ -92,6 +92,13 @@ export function AuthProvider({ children }) {
     return response
   }, [])
 
+  const updateProfile = useCallback(async (payload) => {
+    const response = await authService.updateProfile(payload)
+    setUser(response.user)
+    toast.success('Profile updated successfully')
+    return response
+  }, [])
+
   const value = useMemo(
     () => ({
       isAuthenticated: Boolean(user),
@@ -104,9 +111,10 @@ export function AuthProvider({ children }) {
       sendPasswordResetOtp,
       sendPhoneOtp,
       user,
+      updateProfile,
       verifyPhoneOtp,
     }),
-    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp],
+    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, updateProfile, user, verifyPhoneOtp],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

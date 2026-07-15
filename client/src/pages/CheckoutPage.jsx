@@ -1,4 +1,4 @@
-import { CheckCircle2, CreditCard, LockKeyhole, MapPin, PackageCheck, Plus, ShieldCheck, Sparkles } from 'lucide-react'
+import { CheckCircle2, CreditCard, LockKeyhole, MapPin, PackageCheck, Plus, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -123,7 +123,7 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
-    if (items.length === 0) return toast.error('Your cart is empty')
+    if (items.length === 0) return toast.error('Your bag is empty')
     if (!selectedAddress) return toast.error('Please select or add an address')
     setPending(true)
     try {
@@ -148,7 +148,7 @@ export default function CheckoutPage() {
   return (
     <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
       {successOrderId && <OrderSuccessBlast />}
-      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to cart" />
+      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to bag" />
       <CheckoutSteps />
       <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">

@@ -1,4 +1,4 @@
-import { ChevronDown, CircleUserRound, Heart, Menu, PackageCheck, Search, ShoppingCart, X } from 'lucide-react'
+import { Baby, BookOpen, CircleUserRound, Droplets, Heart, Headphones, Menu, PackageCheck, ShieldCheck, ShoppingBag, Star, Truck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { categories } from '../data/products'
@@ -9,132 +9,52 @@ import Logo from './Logo'
 import SearchBar from './SearchBar'
 
 const publicNavLinks = [
-  { label: 'Shop', to: '/category' },
-  { label: 'Categories', to: '/category?view=categories' },
-  { label: 'Best Sellers', to: '/category?sort=-ratingsAverage' },
-  { label: 'Orders', to: '/orders' },
-  { label: 'About', to: '/about' },
-  { label: 'Contact', to: '/contact' },
+  { label: 'Shop all', to: '/category', Icon: Baby },
+  { label: 'Bath & Wash', to: '/category?search=wash', Icon: Droplets },
+  { label: 'Skin & Body', to: '/category?search=lotion', Icon: Heart },
+  { label: 'Diaper Care', to: '/category?search=diaper', Icon: ShieldCheck },
+  { label: 'Best Sellers', to: '/category?sort=-ratingsAverage', Icon: Star, featured: true },
+  { label: 'Our Story', to: '/about', Icon: BookOpen },
 ]
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { cartCount, totals } = useCart()
   const { isAuthenticated, logout, user } = useAuth()
-  const navLinks = user?.role === 'admin'
-    ? [...publicNavLinks.slice(0, 4), { label: 'Admin', to: '/admin' }, ...publicNavLinks.slice(4)]
-    : publicNavLinks
+  const navLinks = user?.role === 'admin' ? [...publicNavLinks, { label: 'Admin', to: '/admin', Icon: ShieldCheck }] : publicNavLinks
 
   useEffect(() => {
     if (!menuOpen) return undefined
-
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
+    return () => { document.body.style.overflow = previousOverflow }
   }, [menuOpen])
 
   return (
-    <header className="sticky top-0 z-50 mb-2 border-b border-sky-100/80 bg-white/82 shadow-[0_12px_36px_rgba(74,166,217,0.09)] backdrop-blur-2xl">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 md:gap-4 lg:py-0.5 lg:pl-6 lg:pr-4">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-[0_4px_16px_rgba(23,50,77,.06)]">
+      <div className="hidden bg-brand-ink text-white md:block">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-2 text-[10px] font-bold uppercase tracking-[.13em]">
+          <span className="flex items-center gap-2 text-white/90"><Truck className="h-3.5 w-3.5 text-brand-green" /> Complimentary delivery on orders above ₹499</span>
+          <div className="flex items-center gap-2"><Link to="/orders" className="flex items-center gap-1.5 rounded-full border border-brand-green/45 bg-brand-green/15 px-3 py-1 text-white shadow-[0_2px_8px_rgba(0,0,0,.12)] transition hover:-translate-y-px hover:bg-brand-green/30"><PackageCheck className="h-3.5 w-3.5 text-brand-green" /> Track order</Link><Link to="/contact" className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-white shadow-[0_2px_8px_rgba(0,0,0,.12)] transition hover:-translate-y-px hover:bg-white/20"><Headphones className="h-3.5 w-3.5 text-brand-blue" /> Care support</Link></div>
+        </div>
+      </div>
+
+      <div className="mx-auto flex max-w-[1280px] items-center gap-3 px-4 py-2.5 sm:gap-5 lg:px-6 lg:py-3">
         <Logo />
-        <div className="hidden min-w-0 items-center justify-start gap-4 sm:flex xl:gap-5">
-          <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue lg:flex">
-            All Categories <ChevronDown className="h-4 w-4" />
-          </Link>
-          <SearchBar className="w-full max-w-[300px] xl:max-w-[340px]" />
-          <Link to="/category" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-ink shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:text-brand-blue 2xl:grid" aria-label="Search products">
-            <Search className="h-5 w-5" />
-          </Link>
-          <Link to="/wishlist" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-red-500 shadow-[0_14px_32px_rgba(239,68,68,0.14)] transition hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-600 xl:grid" aria-label="Wishlist">
-            <Heart className="h-5 w-5 fill-current" />
-          </Link>
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3 xl:gap-4">
-          <Link to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
-              <CircleUserRound className="h-5 w-5" />
-            </span>
-            {isAuthenticated ? user?.name || user?.phone || 'Account' : 'Login / Register'}
-          </Link>
-          {isAuthenticated && (
-            <button type="button" className="hidden rounded-full bg-red-50 px-4 py-2.5 text-sm font-black text-red-500 shadow-[0_12px_28px_rgba(239,68,68,0.10)] transition hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-600 xl:block" onClick={logout}>
-              Logout
-            </button>
-          )}
-          <Link to="/orders" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-brand-blue shadow-[0_14px_32px_rgba(74,166,217,0.12)] transition hover:-translate-y-0.5 hover:bg-sky-50 xl:grid" aria-label="Orders">
-            <PackageCheck className="h-5 w-5" />
-          </Link>
-          <Link to="/cart" className="relative flex items-center gap-2 rounded-full px-1 py-1.5 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 sm:px-2 sm:py-2">
-            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)] sm:h-12 sm:w-12">
-              <ShoppingCart className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-              {cartCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-green text-[11px] text-white shadow-[0_8px_18px_rgba(124,197,118,0.32)]">{cartCount}</span>}
-            </span>
-            <span className="hidden sm:block leading-tight">
-              Cart ({cartCount})<br />{formatPrice(totals.total)}
-            </span>
-          </Link>
-          <button className="grid h-10 w-10 place-items-center rounded-full border border-sky-100 bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.10)] sm:h-11 sm:w-11 lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+        <div className="hidden min-w-0 flex-1 lg:block"><SearchBar className="mx-auto max-w-[510px]" /></div>
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Link to="/wishlist" className="hidden h-10 w-10 place-items-center rounded-full text-brand-ink transition hover:bg-brand-mist hover:text-brand-blue lg:grid" aria-label="Wishlist"><Heart className="h-[19px] w-[19px]" /></Link>
+          <Link to="/orders" className="hidden h-10 w-10 place-items-center rounded-full text-brand-ink transition hover:bg-brand-mist hover:text-brand-blue xl:grid" aria-label="Orders"><PackageCheck className="h-[19px] w-[19px]" /></Link>
+          <Link to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="hidden items-center gap-2 border-l border-slate-200 px-3 py-1 text-sm font-extrabold text-brand-ink transition hover:text-brand-blue lg:flex"><span className="grid h-9 w-9 place-items-center rounded-full bg-brand-mist text-brand-blue"><CircleUserRound className="h-5 w-5" /></span><span className="max-w-[120px] truncate">{isAuthenticated ? user?.name || 'Account' : 'Account'}</span></Link>
+          <Link to="/cart" className="relative flex items-center gap-2 border-l border-slate-200 py-1 pl-3 text-brand-ink transition hover:text-brand-blue sm:pl-4" aria-label="Shopping bag"><span className="relative grid h-10 w-10 place-items-center rounded-full bg-brand-mist"><ShoppingBag className="h-5 w-5" />{cartCount > 0 && <span className="absolute right-0 top-0 grid h-4 w-4 place-items-center rounded-full bg-brand-blue text-[9px] font-extrabold text-white">{cartCount}</span>}</span><span className="hidden text-left text-[11px] font-bold leading-4 sm:block"><span className="block uppercase tracking-[.1em] text-slate-400">Bag</span>{formatPrice(totals.total)}</span></Link>
+          <button className="ml-1 grid h-10 w-10 place-items-center border border-slate-200 text-brand-ink transition hover:border-brand-blue hover:text-brand-blue lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>
-      <div className="mx-auto block max-w-[1180px] px-4 pb-3 sm:hidden">
-        <SearchBar compact />
-      </div>
-      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-7 px-4 pb-1.5 text-brand-ink lg:flex xl:gap-9">
-        {navLinks.map(({ label, to }) => (
-          <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `main-nav-link ${isActive ? 'main-nav-link-active' : ''}`}>
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-      {menuOpen && (
-        <div className="baby-drawer-backdrop fixed inset-0 z-[70] h-dvh overflow-hidden bg-brand-ink/35 lg:hidden">
-          <button type="button" className="absolute inset-0 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-          <nav className="baby-drawer-panel fixed inset-y-0 right-0 flex h-dvh w-[min(100vw,410px)] flex-col overflow-hidden rounded-l-[1.1rem] border-l border-sky-100 bg-white shadow-[0_28px_90px_rgba(23,50,77,0.22)] sm:w-[min(92vw,410px)] sm:rounded-l-[1.6rem]">
-          <div className="flex items-center justify-between border-b border-sky-100 bg-white px-4 py-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-green">BabyCure</p>
-              <h2 className="font-display text-xl font-black text-brand-ink">Menu</h2>
-            </div>
-            <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-sky-50 text-brand-blue" onClick={() => setMenuOpen(false)} aria-label="Close menu">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="grid gap-2 overflow-y-auto bg-white p-4">
-            {navLinks.map(({ label, to }) => (
-              <NavLink key={`${label}-${to}`} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `rounded-2xl px-4 py-3.5 text-sm font-black transition ${isActive ? 'bg-brand-blue text-white shadow-[0_14px_34px_rgba(74,166,217,0.22)]' : 'bg-sky-50/70 text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}>
-                {label}
-              </NavLink>
-            ))}
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <Link onClick={() => setMenuOpen(false)} to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-brand-blue shadow-sm">{user?.role === 'admin' ? 'Admin CRM' : isAuthenticated ? 'My Account' : 'Account'}</Link>
-              <Link onClick={() => setMenuOpen(false)} to="/checkout" className="rounded-2xl bg-brand-green px-4 py-3 text-center text-sm font-black text-white shadow-[0_14px_34px_rgba(124,197,118,0.22)]">Checkout</Link>
-            </div>
-            {isAuthenticated && (
-              <button type="button" onClick={() => { logout(); setMenuOpen(false) }} className="rounded-2xl bg-red-50 px-4 py-3 text-center text-sm font-black text-red-500">
-                Logout
-              </button>
-            )}
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-blue-50 pt-3">
-              {categories.slice(0, 4).map((category) => (
-                <Link
-                  key={category.id}
-                  onClick={() => setMenuOpen(false)}
-                  to={`/category?category=${category.id}`}
-                  className="rounded-2xl bg-brand-mist px-4 py-3 text-sm font-black text-brand-blue"
-                >
-                  {category.title}
-                </Link>
-              ))}
-            </div>
-          </div>
-          </nav>
-        </div>
-      )}
+
+      <div className="mx-auto block max-w-[1280px] border-t border-slate-100 px-4 py-2.5 lg:hidden"><SearchBar compact /></div>
+      <nav aria-label="Shop categories" className="hidden border-t border-slate-200 bg-[#fbfdff] lg:block"><div className="mx-auto flex max-w-[1280px] items-center justify-center gap-1.5 px-6 py-2">{navLinks.map(({ label, to, featured }) => <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `rounded-full px-4 py-2 text-[13px] font-extrabold tracking-[-.01em] transition-all duration-200 ${featured ? 'bg-[#fff5d9] text-[#9a6700] hover:-translate-y-px hover:bg-[#ffebae] hover:shadow-[0_5px_12px_rgba(154,103,0,.15)]' : isActive ? 'bg-brand-mist text-brand-blue shadow-[0_2px_8px_rgba(74,166,217,.12)]' : 'text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}><span className="flex items-center gap-1.5">{featured && <Star className="h-3.5 w-3.5 fill-current" />}{label}</span></NavLink>)}</div></nav>
+
+      {menuOpen && <div className="fixed inset-0 z-[70] bg-brand-ink/35 lg:hidden"><button type="button" className="absolute inset-0" aria-label="Close menu" onClick={() => setMenuOpen(false)} /><nav className="absolute inset-y-0 right-0 flex w-[min(90vw,390px)] flex-col overflow-hidden bg-white shadow-[-20px_0_50px_rgba(23,50,77,.16)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-5"><div><p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[.16em] text-brand-green"><ShieldCheck className="h-3.5 w-3.5" /> BabyCure</p><h2 className="mt-1 text-xl font-extrabold text-brand-ink">Explore care</h2></div><button type="button" onClick={() => setMenuOpen(false)} className="grid h-10 w-10 place-items-center border border-slate-200 text-brand-ink" aria-label="Close menu"><X className="h-5 w-5" /></button></div><div className="overflow-y-auto p-4">{navLinks.map(({ label, to, Icon, featured }) => <NavLink key={`${label}-${to}`} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex items-center gap-3 border-b border-slate-100 px-2 py-4 text-sm font-extrabold ${featured ? 'text-[#9a6700]' : isActive ? 'text-brand-blue' : 'text-brand-ink'}`}><Icon className={`h-[18px] w-[18px] ${featured ? 'fill-current' : ''}`} />{label}</NavLink>)}<div className="mt-5 grid grid-cols-2 gap-3"><Link onClick={() => setMenuOpen(false)} to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="border border-slate-200 px-4 py-3 text-center text-sm font-extrabold text-brand-ink">{isAuthenticated ? 'My account' : 'Sign in'}</Link><Link onClick={() => setMenuOpen(false)} to="/cart" className="bg-brand-ink px-4 py-3 text-center text-sm font-extrabold text-white">My bag</Link></div>{isAuthenticated && <button type="button" onClick={() => { logout(); setMenuOpen(false) }} className="mt-3 w-full border border-red-100 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-600">Sign out</button>}<div className="mt-7 border-t border-slate-200 pt-5"><p className="mb-3 text-[10px] font-extrabold uppercase tracking-[.15em] text-slate-400">Shop categories</p><div className="grid grid-cols-2 gap-2">{categories.map((category) => <Link key={category.id} onClick={() => setMenuOpen(false)} to={`/category?search=${encodeURIComponent(category.title)}`} className="bg-brand-mist px-3 py-3 text-sm font-extrabold text-brand-ink">{category.title}</Link>)}</div></div></div></nav></div>}
     </header>
   )
 }

@@ -129,7 +129,7 @@ const policies = {
       ['Are Baby Cure products suitable for newborns?', 'Please check the age recommendations mentioned on each product label. Products specifically formulated for newborns can be used from birth unless otherwise stated.'],
       ['Are Baby Cure products safe and tested?', 'Product-specific claims information is mentioned on the product packaging and product pages.'],
       ['Do Baby Cure products contain harmful chemicals?', 'We strive to create baby-friendly formulations. Please refer to the ingredient list on each product page for complete details.'],
-      ['How can I place an order?', 'Select your desired products, add them to your cart, proceed to checkout, and complete payment. Cash on Delivery may be available where enabled and serviceable.'],
+      ['How can I place an order?', 'Select your desired products, add them to your bag, proceed to checkout, and complete payment. Cash on Delivery may be available where enabled and serviceable.'],
       ['What payment methods do you accept?', 'We accept UPI, credit cards, debit cards, net banking, wallets and other payment methods supported by our payment gateway.'],
       ['How long does delivery take?', 'Most orders are delivered within 2-5 business days in metro cities and 3-7 business days in other locations. Delivery timelines may vary based on location and courier availability.'],
       ['How can I track my order?', 'Once your order is shipped, you will receive a tracking link and tracking number via email, SMS, or WhatsApp where applicable.'],
