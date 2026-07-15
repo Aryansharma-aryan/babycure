@@ -37,8 +37,8 @@ export default function Header() {
   }, [menuOpen])
 
   return (
-    <header className="sticky top-0 z-50 border-b border-sky-100/80 bg-white/78 shadow-[0_14px_45px_rgba(74,166,217,0.10)] backdrop-blur-2xl">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 md:gap-4 lg:py-1.5 lg:pl-6 lg:pr-4">
+    <header className="sticky top-0 z-50 mb-2 border-b border-sky-100/80 bg-white/82 shadow-[0_12px_36px_rgba(74,166,217,0.09)] backdrop-blur-2xl">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 md:gap-4 lg:py-0.5 lg:pl-6 lg:pr-4">
         <Logo />
         <div className="hidden min-w-0 items-center justify-start gap-4 sm:flex xl:gap-5">
           <Link to="/category" className="hidden items-center gap-2 rounded-full border border-sky-100 bg-white/90 px-4 py-2.5 text-sm font-extrabold text-brand-ink shadow-[0_14px_34px_rgba(74,166,217,0.10)] transition hover:border-brand-blue hover:text-brand-blue lg:flex">
@@ -53,7 +53,7 @@ export default function Header() {
           </Link>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3 xl:gap-4">
-          <Link to={user?.role === 'admin' ? '/admin' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
+          <Link to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-extrabold text-brand-ink transition hover:bg-sky-50 lg:flex">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-sky-50 text-brand-blue shadow-[0_10px_24px_rgba(74,166,217,0.14)]">
               <CircleUserRound className="h-5 w-5" />
             </span>
@@ -84,7 +84,7 @@ export default function Header() {
       <div className="mx-auto block max-w-[1180px] px-4 pb-3 sm:hidden">
         <SearchBar compact />
       </div>
-      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-7 px-4 pb-3 text-brand-ink lg:flex xl:gap-9">
+      <nav className="mx-auto hidden max-w-[1180px] items-center justify-center gap-7 px-4 pb-1.5 text-brand-ink lg:flex xl:gap-9">
         {navLinks.map(({ label, to }) => (
           <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `main-nav-link ${isActive ? 'main-nav-link-active' : ''}`}>
             {label}
@@ -111,7 +111,7 @@ export default function Header() {
               </NavLink>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <Link onClick={() => setMenuOpen(false)} to={user?.role === 'admin' ? '/admin' : '/login'} className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-brand-blue shadow-sm">{user?.role === 'admin' ? 'Admin CRM' : isAuthenticated ? 'My Account' : 'Account'}</Link>
+              <Link onClick={() => setMenuOpen(false)} to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="rounded-2xl border border-sky-100 bg-white px-4 py-3 text-center text-sm font-black text-brand-blue shadow-sm">{user?.role === 'admin' ? 'Admin CRM' : isAuthenticated ? 'My Account' : 'Account'}</Link>
               <Link onClick={() => setMenuOpen(false)} to="/checkout" className="rounded-2xl bg-brand-green px-4 py-3 text-center text-sm font-black text-white shadow-[0_14px_34px_rgba(124,197,118,0.22)]">Checkout</Link>
             </div>
             {isAuthenticated && (
