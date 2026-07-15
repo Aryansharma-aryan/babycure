@@ -217,26 +217,26 @@ function HeroSection() {
     <section className="relative isolate min-h-[calc(100svh-104px)] overflow-hidden bg-[linear-gradient(135deg,#FFFFFF_0%,#F6FFF4_43%,#EFF9FF_100%)] sm:min-h-[620px] lg:min-h-[calc(100vh-120px)] xl:min-h-[700px]" aria-roledescription="carousel" aria-label="BabyCure featured care stories">
       <AnimatePresence mode="wait">
         <motion.div key={activeSlide} initial={{ opacity: 0, scale: 1.025 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.65, ease: 'easeOut' }} className="absolute inset-0">
-          <img src={slide.image} alt={slide.alt} className={`h-full w-full object-cover ${slide.align === 'right' ? 'object-[38%_center] sm:object-center' : 'object-[62%_center]'}`} loading={activeSlide === 0 ? 'eager' : 'lazy'} />
+          <img src={slide.image} alt={slide.alt} className={`h-full w-full object-cover ${slide.align === 'right' ? 'object-[38%_center] sm:object-center' : 'object-[70%_center] sm:object-[62%_center]'}`} loading={activeSlide === 0 ? 'eager' : 'lazy'} />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,42,68,0.18)_0%,rgba(255,255,255,0.04)_38%,rgba(255,255,255,0.04)_64%,rgba(9,42,68,0.08)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_24%,rgba(124,197,118,0.14),transparent_28rem),radial-gradient(circle_at_40%_18%,rgba(74,166,217,0.08),transparent_28rem)]" />
         </motion.div>
       </AnimatePresence>
-      <motion.div key={`copy-${activeSlide}`} initial="hidden" animate="visible" variants={stagger} className={`relative mx-auto grid min-h-[calc(100svh-104px)] max-w-7xl items-center px-4 py-10 sm:min-h-[620px] lg:min-h-[calc(100vh-120px)] lg:px-6 xl:min-h-[700px] ${slide.align === 'right' ? 'justify-items-end text-right' : 'justify-items-start text-left'}`}>
-        <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: 'easeOut' }} className="max-w-2xl rounded-[2rem] border border-white/70 bg-white/78 p-5 shadow-[0_24px_80px_rgba(23,50,77,0.16)] backdrop-blur-md sm:p-7 lg:p-8">
-          <span className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-white/88 px-5 py-3 text-xs font-extrabold uppercase tracking-[0.22em] text-brand-green shadow-[0_18px_50px_rgba(124,197,118,0.16)] backdrop-blur"><Sparkles className="h-4 w-4" /> {slide.eyebrow}</span>
-          <h1 className="mt-6 font-display text-[44px] font-extrabold leading-[0.97] tracking-[-0.035em] text-brand-ink sm:text-[60px] lg:text-[68px]">{slide.title}</h1>
+      <motion.div key={`copy-${activeSlide}`} initial="hidden" animate="visible" variants={stagger} className={`relative mx-auto grid min-h-[calc(100svh-104px)] max-w-7xl items-center px-4 py-20 sm:min-h-[620px] sm:py-10 lg:min-h-[calc(100vh-120px)] lg:px-6 xl:min-h-[700px] ${slide.align === 'right' ? 'justify-items-end text-right' : 'justify-items-start text-left'}`}>
+        <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: 'easeOut' }} className="max-w-2xl rounded-[1.7rem] border border-white/70 bg-white/80 p-5 shadow-[0_20px_56px_rgba(23,50,77,0.16)] backdrop-blur-md sm:rounded-[2rem] sm:p-7 lg:p-8">
+          <span className="inline-flex items-center gap-2 rounded-full border border-green-100 bg-white/88 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-green shadow-[0_14px_32px_rgba(124,197,118,0.14)] backdrop-blur sm:px-5 sm:py-3 sm:text-xs sm:tracking-[0.22em]"><Sparkles className="h-4 w-4" /> {slide.eyebrow}</span>
+          <h1 className="mt-5 font-display text-[40px] font-extrabold leading-[0.97] tracking-[-0.035em] text-brand-ink sm:mt-6 sm:text-[60px] lg:text-[68px]">{slide.title}</h1>
           <p className={`mt-5 max-w-xl text-base font-medium leading-7 text-slate-600 sm:text-lg sm:leading-8 ${slide.align === 'right' ? 'ml-auto' : ''}`}>{slide.copy}</p>
-          <div className={`mt-7 flex flex-wrap gap-3 ${slide.align === 'right' ? 'justify-end' : ''}`}>
-            <Button to="/category" className="rounded-full px-8 py-4 text-base shadow-[0_22px_55px_rgba(74,166,217,0.22)]">Shop Now <ArrowRight className="h-5 w-5" /></Button>
-            <Button to="/category" variant="outline" className="rounded-full border-brand-green/40 bg-white/65 px-8 py-4 text-base backdrop-blur">Explore Collection</Button>
+          <div className={`mt-7 grid gap-3 sm:flex sm:flex-wrap ${slide.align === 'right' ? 'sm:justify-end' : ''}`}>
+            <Button to="/category" className="w-full rounded-full px-6 py-3.5 text-base shadow-[0_22px_55px_rgba(74,166,217,0.22)] sm:w-auto sm:px-8 sm:py-4">Shop Now <ArrowRight className="h-5 w-5" /></Button>
+            <Button to="/category" variant="outline" className="w-full rounded-full border-brand-green/40 bg-white/65 px-6 py-3.5 text-base backdrop-blur sm:w-auto sm:px-8 sm:py-4">Explore Collection</Button>
           </div>
-          <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-            {slide.stats.map(([value, label]) => <motion.div key={label} variants={fadeUp} className="rounded-3xl border border-sky-100 bg-white/76 p-4 text-center shadow-[0_20px_60px_rgba(74,166,217,0.12)] backdrop-blur"><p className="font-display text-2xl font-extrabold text-brand-blue sm:text-3xl">{value}</p><p className="mt-1 text-[11px] font-bold text-slate-500 sm:text-xs">{label}</p></motion.div>)}
+          <div className="mt-6 grid max-w-2xl grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3 sm:grid-cols-4">
+            {slide.stats.map(([value, label]) => <motion.div key={label} variants={fadeUp} className="rounded-2xl border border-sky-100 bg-white/76 p-3 text-center shadow-[0_14px_34px_rgba(74,166,217,0.12)] backdrop-blur sm:rounded-3xl sm:p-4"><p className="font-display text-xl font-extrabold text-brand-blue sm:text-3xl">{value}</p><p className="mt-1 text-[10px] font-bold text-slate-500 sm:text-xs">{label}</p></motion.div>)}
           </div>
         </motion.div>
       </motion.div>
-      <div className="absolute inset-x-0 bottom-6 z-10 mx-auto flex max-w-7xl items-center justify-between px-4 lg:px-6">
+      <div className="absolute inset-x-0 bottom-4 z-10 mx-auto flex max-w-7xl items-center justify-between px-4 sm:bottom-6 lg:px-6">
         <div className="hidden gap-2 sm:flex">{heroSlides.map((item, index) => <button type="button" key={item.alt} onClick={() => setActiveSlide(index)} className={`h-2.5 rounded-full transition-all ${index === activeSlide ? 'w-10 bg-brand-green' : 'w-2.5 bg-brand-ink/25 hover:bg-brand-ink/45'}`} aria-label={`Show slide ${index + 1}`} aria-current={index === activeSlide} />)}</div>
         <div className="ml-auto flex gap-2"><button type="button" onClick={() => goToSlide(-1)} className="grid h-11 w-11 place-items-center rounded-full border border-white/80 bg-white/85 text-brand-ink shadow-lg backdrop-blur transition hover:scale-105" aria-label="Previous slide"><ChevronLeft className="h-5 w-5" /></button><button type="button" onClick={() => goToSlide(1)} className="grid h-11 w-11 place-items-center rounded-full border border-white/80 bg-white/85 text-brand-ink shadow-lg backdrop-blur transition hover:scale-105" aria-label="Next slide"><ChevronRight className="h-5 w-5" /></button></div>
       </div>
