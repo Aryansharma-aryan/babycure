@@ -18,23 +18,31 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 body {
   margin: 0;
-  min-width: 320px;
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   background:
     radial-gradient(circle at 12% 0%, rgba(124, 197, 118, 0.12), transparent 26rem),
     radial-gradient(circle at 90% 10%, rgba(74, 166, 217, 0.13), transparent 28rem),
     #f8fcff;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
 }
 
 #root {
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 button,
@@ -77,6 +85,7 @@ textarea:focus-visible {
 }
 
 img {
+  display: block;
   max-width: 100%;
 }
 
@@ -373,6 +382,12 @@ img {
 }
 
 @media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
   .brand-logo {
     width: 132px;
     height: 64px;

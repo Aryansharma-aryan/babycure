@@ -15,6 +15,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const BlogPage = lazy(() => import('./pages/BlogPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
+const WhyBabyCurePage = lazy(() => import('./pages/WhyBabyCurePage'))
 const PolicyPage = lazy(() => import('./pages/PolicyPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'))
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
       { path: 'blog', element: <BlogPage /> },
       { path: 'contact', element: <ContactPage /> },
       { path: 'about', element: <AboutPage /> },
+      { path: 'why-baby-cure', element: <WhyBabyCurePage /> },
       { path: 'shipping-policy', element: <PolicyPage /> },
       { path: 'return-refund-policy', element: <PolicyPage /> },
       { path: 'faqs', element: <PolicyPage /> },

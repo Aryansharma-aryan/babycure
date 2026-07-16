@@ -1,4 +1,4 @@
-import { Baby, BookOpen, CircleUserRound, Droplets, Heart, Headphones, Menu, PackageCheck, ShieldCheck, ShoppingBag, Star, Truck, X } from 'lucide-react'
+import { Baby, BookOpen, CircleUserRound, FlaskConical, Heart, Headphones, Menu, PackageCheck, ShieldCheck, ShoppingBag, Truck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { categories } from '../data/products'
@@ -9,12 +9,12 @@ import Logo from './Logo'
 import SearchBar from './SearchBar'
 
 const publicNavLinks = [
-  { label: 'Shop all', to: '/category', Icon: Baby },
-  { label: 'Bath & Wash', to: '/category?search=wash', Icon: Droplets },
-  { label: 'Skin & Body', to: '/category?search=lotion', Icon: Heart },
-  { label: 'Diaper Care', to: '/category?search=diaper', Icon: ShieldCheck },
-  { label: 'Best Sellers', to: '/category?sort=-ratingsAverage', Icon: Star, featured: true },
-  { label: 'Our Story', to: '/about', Icon: BookOpen },
+  { label: 'Home', to: '/', Icon: Baby },
+  { label: 'About', to: '/about', Icon: BookOpen },
+  { label: 'Ingredients', to: '/category?search=natural', Icon: FlaskConical },
+  { label: 'Products', to: '/category', Icon: ShoppingBag },
+  { label: 'Contact', to: '/contact', Icon: Headphones },
+  { label: 'Why Baby Cure', to: '/why-baby-cure', Icon: ShieldCheck },
 ]
 
 export default function Header() {
@@ -52,7 +52,7 @@ export default function Header() {
       </div>
 
       <div className="mx-auto block max-w-[1280px] border-t border-slate-100 px-4 py-2.5 lg:hidden"><SearchBar compact /></div>
-      <nav aria-label="Shop categories" className="hidden border-t border-slate-200 bg-[#fbfdff] lg:block"><div className="mx-auto flex max-w-[1280px] items-center justify-center gap-1.5 px-6 py-2">{navLinks.map(({ label, to, featured }) => <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `rounded-full px-4 py-2 text-[13px] font-extrabold tracking-[-.01em] transition-all duration-200 ${featured ? 'bg-[#fff5d9] text-[#9a6700] hover:-translate-y-px hover:bg-[#ffebae] hover:shadow-[0_5px_12px_rgba(154,103,0,.15)]' : isActive ? 'bg-brand-mist text-brand-blue shadow-[0_2px_8px_rgba(74,166,217,.12)]' : 'text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}><span className="flex items-center gap-1.5">{featured && <Star className="h-3.5 w-3.5 fill-current" />}{label}</span></NavLink>)}</div></nav>
+      <nav aria-label="Main navigation" className="hidden border-t border-slate-200 bg-[#fbfdff] lg:block"><div className="mx-auto flex max-w-[1280px] items-center justify-center gap-1.5 px-6 py-2">{navLinks.map(({ label, to, featured }) => <NavLink key={`${label}-${to}`} to={to} className={({ isActive }) => `rounded-full px-4 py-2 text-[13px] font-extrabold tracking-[-.01em] transition-all duration-200 ${featured ? 'bg-[#fff5d9] text-[#9a6700] hover:-translate-y-px hover:bg-[#ffebae] hover:shadow-[0_5px_12px_rgba(154,103,0,.15)]' : isActive ? 'bg-brand-mist text-brand-blue shadow-[0_2px_8px_rgba(74,166,217,.12)]' : 'text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}><span className="flex items-center gap-1.5">{label}</span></NavLink>)}</div></nav>
 
       {menuOpen && <div className="fixed inset-0 z-[70] bg-brand-ink/35 lg:hidden"><button type="button" className="absolute inset-0" aria-label="Close menu" onClick={() => setMenuOpen(false)} /><nav className="absolute inset-y-0 right-0 flex w-[min(90vw,390px)] flex-col overflow-hidden bg-white shadow-[-20px_0_50px_rgba(23,50,77,.16)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-5"><div><p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[.16em] text-brand-green"><ShieldCheck className="h-3.5 w-3.5" /> BabyCure</p><h2 className="mt-1 text-xl font-extrabold text-brand-ink">Explore care</h2></div><button type="button" onClick={() => setMenuOpen(false)} className="grid h-10 w-10 place-items-center border border-slate-200 text-brand-ink" aria-label="Close menu"><X className="h-5 w-5" /></button></div><div className="overflow-y-auto p-4">{navLinks.map(({ label, to, Icon, featured }) => <NavLink key={`${label}-${to}`} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex items-center gap-3 border-b border-slate-100 px-2 py-4 text-sm font-extrabold ${featured ? 'text-[#9a6700]' : isActive ? 'text-brand-blue' : 'text-brand-ink'}`}><Icon className={`h-[18px] w-[18px] ${featured ? 'fill-current' : ''}`} />{label}</NavLink>)}<div className="mt-5 grid grid-cols-2 gap-3"><Link onClick={() => setMenuOpen(false)} to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="border border-slate-200 px-4 py-3 text-center text-sm font-extrabold text-brand-ink">{isAuthenticated ? 'My account' : 'Sign in'}</Link><Link onClick={() => setMenuOpen(false)} to="/cart" className="bg-brand-ink px-4 py-3 text-center text-sm font-extrabold text-white">My bag</Link></div>{isAuthenticated && <button type="button" onClick={() => { logout(); setMenuOpen(false) }} className="mt-3 w-full border border-red-100 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-600">Sign out</button>}<div className="mt-7 border-t border-slate-200 pt-5"><p className="mb-3 text-[10px] font-extrabold uppercase tracking-[.15em] text-slate-400">Shop categories</p><div className="grid grid-cols-2 gap-2">{categories.map((category) => <Link key={category.id} onClick={() => setMenuOpen(false)} to={`/category?search=${encodeURIComponent(category.title)}`} className="bg-brand-mist px-3 py-3 text-sm font-extrabold text-brand-ink">{category.title}</Link>)}</div></div></div></nav></div>}
     </header>
