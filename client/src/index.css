@@ -210,8 +210,8 @@ img {
   align-items: center;
   justify-content: center;
   align-self: flex-start;
-  width: 184px;
-  height: 82px;
+  width: 170px;
+  height: 72px;
   border-radius: 0;
   background: transparent;
   overflow: visible;
@@ -367,7 +367,7 @@ img {
 
 @media (max-width: 1023px) {
   body {
-    padding-bottom: 76px;
+    padding-bottom: 58px;
   }
 }
 
@@ -389,8 +389,8 @@ img {
   }
 
   .brand-logo {
-    width: 132px;
-    height: 64px;
+    width: 124px;
+    height: 58px;
     padding: 0;
   }
 
