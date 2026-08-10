@@ -1,4 +1,5 @@
 const Order = require('../models/Order')
+const ReturnRequest = require('../models/ReturnRequest')
 const {
   assignAWB,
   createShiprocketOrder,
@@ -7,6 +8,7 @@ const {
   trackShipmentByAWB,
 } = require('../services/shiprocket.service')
 const { notifyUser } = require('../services/notificationService')
+const { notifyOrderEvent } = require('../services/orderNotificationService')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
 
@@ -81,6 +83,45 @@ const pushTrackingHistory = (order, update = {}) => {
   })
 
   return safeStatus
+}
+
+const returnStatusMap = {
+  shipped: 'picked_up',
+  'in transit': 'picked_up',
+  'out for delivery': 'picked_up',
+  delivered: 'received_by_seller',
+  returned: 'received_by_seller',
+  rto: 'received_by_seller',
+}
+
+const replacementStatusMap = {
+  shipped: 'replacement_shipped',
+  'in transit': 'replacement_shipped',
+  'out for delivery': 'replacement_shipped',
+  delivered: 'replacement_delivered',
+}
+
+const normalizeRequestShipmentStatus = (status = '', type = 'return') => {
+  const value = String(status).trim().toLowerCase().replace(/_/g, ' ')
+  const map = type === 'replacement' ? replacementStatusMap : returnStatusMap
+  return map[value] || (type === 'replacement' ? 'replacement_shipped' : 'picked_up')
+}
+
+const pushRequestHistory = (request, status, body = {}) => {
+  const last = request.statusHistory[request.statusHistory.length - 1]
+  const updatedAt = body.updated_at || body.status_date || new Date()
+
+  if (last && last.status === status && String(last.updatedAt) === String(new Date(updatedAt))) {
+    return
+  }
+
+  request.status = status
+  request.statusHistory.push({
+    status,
+    message: body.message || body.activity || body.current_status || body.status || `Shipment ${status.replace(/_/g, ' ')}`,
+    location: body.location || body.current_location,
+    updatedAt,
+  })
 }
 
 const getOrderForShipment = async (orderId) => {
@@ -287,12 +328,20 @@ const trackOrder = asyncHandler(async (req, res) => {
   const response = await trackShipmentByAWB(order.awbCode)
   syncTrackingFromShiprocket(order, response)
   await order.save()
+  const populatedOrder = await populateOrder(Order.findById(order._id))
+
+  notifyOrderEvent({
+    user: populatedOrder.user,
+    order: populatedOrder,
+    type: order.deliveryStatus === 'delivered' ? 'order_delivered' : 'order_tracking_update',
+    metadata: { trackingId: order.awbCode || order.trackingId, source: 'shiprocket_manual_sync' },
+  }).catch(() => {})
 
   res.status(200).json({
     success: true,
     message: 'Tracking synced successfully.',
     tracking: getTrackingPayload(order),
-    order: await populateOrder(Order.findById(order._id)),
+    order: populatedOrder,
     shiprocket: response,
   })
 })
@@ -319,7 +368,50 @@ const shiprocketWebhook = asyncHandler(async (req, res) => {
   })
 
   if (!order) {
-    throw new AppError('Order not found for Shiprocket webhook.', 404)
+    const request = await ReturnRequest.findOne({
+      $or: [
+        ...(awbCode ? [{ returnAwbCode: String(awbCode) }, { replacementAwbCode: String(awbCode) }] : []),
+        ...(shipmentId ? [{ returnShiprocketShipmentId: String(shipmentId) }, { replacementShipmentId: String(shipmentId) }] : []),
+      ],
+    }).populate('user', 'name email phone')
+
+    if (!request) {
+      throw new AppError('Order or return request not found for Shiprocket webhook.', 404)
+    }
+
+    const isReplacementShipment = Boolean(
+      (awbCode && String(request.replacementAwbCode || '') === String(awbCode)) ||
+      (shipmentId && String(request.replacementShipmentId || '') === String(shipmentId)),
+    )
+    const status = normalizeRequestShipmentStatus(body.current_status || body.shipment_status || body.status, isReplacementShipment ? 'replacement' : 'return')
+
+    if (isReplacementShipment) {
+      request.replacementAwbCode = String(awbCode || request.replacementAwbCode || '')
+      request.replacementCourierName = extractFirst(body.courier_name, body.courier, request.replacementCourierName)
+      request.replacementTrackingUrl = extractFirst(body.tracking_url, body.track_url, request.replacementTrackingUrl)
+      request.replacementShipmentStatus = extractFirst(body.current_status, body.shipment_status, body.status, request.replacementShipmentStatus)
+    } else {
+      request.returnAwbCode = String(awbCode || request.returnAwbCode || '')
+      request.returnCourierName = extractFirst(body.courier_name, body.courier, request.returnCourierName)
+      request.returnTrackingUrl = extractFirst(body.tracking_url, body.track_url, request.returnTrackingUrl)
+      request.returnShipmentStatus = extractFirst(body.current_status, body.shipment_status, body.status, request.returnShipmentStatus)
+    }
+
+    pushRequestHistory(request, status, body)
+    await request.save()
+
+    notifyUser({
+      userId: request.user?._id || request.user,
+      type: 'return_tracking_update',
+      title: `${isReplacementShipment ? 'Replacement' : 'Return'} tracking updated`,
+      message: `${request.requestNumber} is now ${status.replace(/_/g, ' ')}.`,
+      metadata: { requestId: request._id, awbCode: awbCode || request.returnAwbCode || request.replacementAwbCode },
+    }).catch(() => {})
+
+    return res.status(200).json({
+      success: true,
+      message: 'Shiprocket return/replacement webhook processed.',
+    })
   }
 
   order.awbCode = String(awbCode || order.awbCode || '')
@@ -337,25 +429,19 @@ const shiprocketWebhook = asyncHandler(async (req, res) => {
   syncOrderStatus(order)
   await order.save()
 
-  if (['shipped', 'in_transit'].includes(order.deliveryStatus)) {
-    notifyUser({
-      userId: order.user,
-      type: 'order_shipped',
-      title: 'Your order has shipped',
-      message: `Order ${order.orderNumber} is on the way.`,
-      metadata: { orderId: order._id, trackingId: order.awbCode || order.trackingId },
-    }).catch(() => {})
-  }
+  const populatedOrder = await populateOrder(Order.findById(order._id))
+  const notificationType = order.deliveryStatus === 'delivered'
+    ? 'order_delivered'
+    : ['shipped', 'in_transit'].includes(order.deliveryStatus)
+      ? 'order_shipped'
+      : 'order_tracking_update'
 
-  if (order.deliveryStatus === 'delivered') {
-    notifyUser({
-      userId: order.user,
-      type: 'order_delivered',
-      title: 'Order delivered',
-      message: `Order ${order.orderNumber} has been delivered.`,
-      metadata: { orderId: order._id },
-    }).catch(() => {})
-  }
+  notifyOrderEvent({
+    user: populatedOrder.user,
+    order: populatedOrder,
+    type: notificationType,
+    metadata: { trackingId: order.awbCode || order.trackingId, source: 'shiprocket_webhook' },
+  }).catch(() => {})
 
   res.status(200).json({
     success: true,

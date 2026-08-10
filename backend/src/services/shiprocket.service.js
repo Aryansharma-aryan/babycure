@@ -177,12 +177,79 @@ const buildShiprocketOrderPayload = (order) => {
   }
 }
 
+const buildReturnOrderPayload = (order, request) => {
+  const address = order.shippingAddress
+  const { firstName, lastName } = getCustomerNameParts(address?.fullName || order.user?.name)
+
+  if (!address) {
+    throw new AppError('Order shipping address is required before creating a return pickup.', 400)
+  }
+
+  return {
+    order_id: request.requestNumber,
+    order_date: new Date().toISOString().slice(0, 10),
+    channel_id: '',
+    pickup_customer_name: firstName,
+    pickup_last_name: lastName,
+    pickup_address: address.addressLine1,
+    pickup_address_2: [address.addressLine2, address.landmark].filter(Boolean).join(', '),
+    pickup_city: address.city,
+    pickup_state: address.state,
+    pickup_country: address.country || 'India',
+    pickup_pincode: address.postalCode,
+    pickup_email: order.user?.email || process.env.SHIPROCKET_FALLBACK_EMAIL || 'support@babycure.in',
+    pickup_phone: address.phone || order.user?.phone,
+    shipping_customer_name: process.env.SHIPROCKET_RETURN_NAME || 'Baby Cure',
+    shipping_address: process.env.SHIPROCKET_RETURN_ADDRESS || process.env.SHIPROCKET_PICKUP_ADDRESS || address.addressLine1,
+    shipping_city: process.env.SHIPROCKET_RETURN_CITY || process.env.SHIPROCKET_PICKUP_CITY || address.city,
+    shipping_state: process.env.SHIPROCKET_RETURN_STATE || process.env.SHIPROCKET_PICKUP_STATE || address.state,
+    shipping_country: 'India',
+    shipping_pincode: process.env.SHIPROCKET_RETURN_PINCODE || process.env.SHIPROCKET_PICKUP_PINCODE || address.postalCode,
+    shipping_email: process.env.SHIPROCKET_FALLBACK_EMAIL || 'support@babycure.in',
+    shipping_phone: process.env.SHIPROCKET_RETURN_PHONE || address.phone || order.user?.phone,
+    order_items: request.items.map((item) => ({
+      name: item.name,
+      sku: String(item.product).slice(0, 40),
+      units: item.quantity,
+      selling_price: item.price,
+    })),
+    payment_method: 'Prepaid',
+    sub_total: request.items.reduce((sum, item) => sum + item.quantity * item.price, 0),
+    length: Number(process.env.SHIPROCKET_DEFAULT_LENGTH_CM || 20),
+    breadth: Number(process.env.SHIPROCKET_DEFAULT_BREADTH_CM || 15),
+    height: Number(process.env.SHIPROCKET_DEFAULT_HEIGHT_CM || 10),
+    weight: getOrderWeight({ orderItems: request.items }),
+  }
+}
+
 const createShiprocketOrder = async (order) => {
   const payload = buildShiprocketOrderPayload(order)
   return shiprocketFetch('/orders/create/adhoc', {
     method: 'POST',
     body: payload,
   })
+}
+
+const createReturnPickup = async (order, request) => {
+  const path = process.env.SHIPROCKET_RETURN_ORDER_PATH || '/orders/create/return'
+  return shiprocketFetch(path, {
+    method: 'POST',
+    body: buildReturnOrderPayload(order, request),
+  })
+}
+
+const createReplacementShipment = async (order, request) => {
+  const sourceOrder = order.toObject?.() || order
+  const replacementOrder = {
+    ...sourceOrder,
+    orderNumber: `${order.orderNumber}-REPL-${request.requestNumber}`,
+    orderItems: request.items,
+    paymentMethod: 'ONLINE',
+    itemsPrice: request.items.reduce((sum, item) => sum + item.quantity * item.price, 0),
+    totalPrice: 0,
+  }
+
+  return createShiprocketOrder(replacementOrder)
 }
 
 const assignAWB = async (shipmentId) =>
@@ -207,6 +274,8 @@ const trackShipmentByAWB = async (awbCode) => shiprocketFetch(`/courier/track/aw
 
 module.exports = {
   assignAWB,
+  createReplacementShipment,
+  createReturnPickup,
   createShiprocketOrder,
   generateLabel,
   loginToShiprocket,

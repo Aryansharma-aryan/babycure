@@ -1,22 +1,11 @@
-import { ArrowRight, ChevronRight, Droplets, Heart, Leaf, ShieldCheck, Truck } from 'lucide-react'
+import { ArrowRight, Baby, ChevronRight, Droplets, Globe2, Heart, Leaf, ShieldCheck, Truck } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
+import Logo from '../components/Logo'
 import { categories, products } from '../data/products'
 import heroProducts from '../assets/babycure-hero-products.png'
 import familyImage from '../assets/hero.png'
-import babycureCareVisual from '../assets/babycure-hero-ai.png'
-import shampooVisual from '../assets/about-products-promise.png'
-import lotionVisual from '../assets/heroo.png'
-import bathVisual from '../assets/about-mother-baby-care.png'
-
-const collections = [
-  { title: 'Bath & Wash', copy: 'Gentle cleansing for daily bath time.', category: 'baby-care', image: shampooVisual, position: '42% 64%', size: 'cover' },
-  { title: 'Baby Moisturizers', copy: 'Soft, nourishing daily skin care.', category: 'skin-care', image: lotionVisual, position: '72% 68%', size: 'cover' },
-  { title: 'Diaper Care', copy: 'Comfort through every change.', category: 'diapering', image: babycureCareVisual, position: '96% 76%', size: '300%' },
-  { title: 'Baby Wipes', copy: 'Soft clean-ups at home or away.', category: 'diapering', image: heroProducts, position: '82% 72%', size: '300%' },
-  { title: 'Massage & Oil', copy: 'Made for tiny moments together.', category: 'baby-care', image: bathVisual, position: '20% 74%', size: '300%' },
-]
 
 export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
@@ -24,16 +13,11 @@ export default function HomePage() {
   const availableCategories = categories.filter((category) => category.id !== 'toys' && category.id !== 'gift-sets')
   const visibleProducts = useMemo(() => products.filter((product) => activeCategory === 'all' || product.category === activeCategory).slice(0, 6), [activeCategory])
 
-  const selectCategory = (id) => {
-    setActiveCategory(id)
-    productArea.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
   return (
     <main className="overflow-hidden bg-white text-brand-ink">
       <Hero />
       <TrustBar />
-      <RoutineGallery onSelect={selectCategory} />
+      <OurStory />
       <ProductDiscovery productArea={productArea} categories={availableCategories} activeCategory={activeCategory} onSelect={setActiveCategory} products={visibleProducts} />
       <BrandStory />
     </main>
@@ -56,8 +40,16 @@ function TrustBar() {
   return <section className="border-b border-slate-100 bg-white"><div className="mx-auto grid max-w-7xl divide-y divide-slate-100 px-5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-6">{points.map(([Icon, title, text]) => <div key={title} className="flex items-center gap-3 py-5 sm:px-5 lg:px-6"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-mist text-brand-blue"><Icon className="h-5 w-5" /></span><div><h3 className="text-sm font-extrabold text-brand-ink">{title}</h3><p className="mt-0.5 text-xs font-medium text-slate-500">{text}</p></div></div>)}</div></section>
 }
 
-function RoutineGallery({ onSelect }) {
-  return <section className="mx-auto max-w-7xl px-4 py-14 sm:py-20 lg:px-6"><SectionTitle eyebrow="Shop by routine" title="Care for every little moment" action="View all products" /><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{collections.map((collection) => <button key={collection.title} type="button" onClick={() => onSelect(collection.category)} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white text-left transition duration-300 hover:-translate-y-1 hover:border-brand-blue/40 hover:shadow-[0_18px_42px_rgba(23,50,77,.14)]"><div role="img" aria-label={`${collection.title} BabyCure products`} className="relative aspect-[4/3] overflow-hidden bg-[#f5fafb] bg-no-repeat transition duration-500 group-hover:scale-105" style={{ backgroundImage: `url(${collection.image})`, backgroundPosition: collection.position, backgroundSize: collection.size }}><span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.12em] text-brand-green">BabyCure</span></div><div className="p-4"><h3 className="text-base font-extrabold text-brand-ink">{collection.title}</h3><p className="mt-1 min-h-10 text-xs leading-5 text-slate-500">{collection.copy}</p><span className="mt-3 inline-flex items-center gap-1 text-sm font-extrabold text-brand-blue">Shop routine <ChevronRight className="h-4 w-4" /></span></div></button>)}</div></section>
+function OurStory() {
+  const journey = [
+    [Heart, 'It All Started with Love', 'Inspired by the purest bond between a parent and child, Baby Cure was born.'],
+    [Leaf, 'Carefully Chosen Ingredients', 'We handpick natural, safe and gentle ingredients that nurture delicate baby skin.'],
+    [ShieldCheck, 'Safe & Trusted Formulations', 'Every product is thoughtfully formulated and tested to ensure the highest safety and quality standards.'],
+    [Baby, 'Made for Little Ones', 'Designed for babies’ delicate skin and daily needs, because they deserve nothing but the best.'],
+    [Globe2, 'Caring for Every Baby', 'Today, Baby Cure is trusted by parents everywhere and our promise continues for every baby, every day.'],
+  ]
+
+  return <section className="bg-[#fffdf8] px-4 py-14 sm:py-20 lg:px-6"><div className="mx-auto max-w-7xl"><div className="grid overflow-hidden rounded-[2rem] border border-[#f0eadf] bg-[#fffdf8] shadow-[0_22px_70px_rgba(132,103,54,.10)] lg:grid-cols-[.92fr_1.08fr]"><div className="relative z-10 flex flex-col justify-center px-6 py-12 sm:px-12 sm:py-16 lg:px-16"><p className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-extrabold text-brand-blue shadow-[0_8px_22px_rgba(23,50,77,.12)]">Our Story <Heart className="h-4 w-4 text-brand-green" /></p><h2 className="mt-7 font-display text-4xl font-extrabold leading-[1.05] text-brand-ink sm:text-5xl">The <span className="text-brand-blue">Baby Cure</span> Story <Heart className="inline h-7 w-7 text-brand-green sm:h-8 sm:w-8" /></h2><p className="mt-4 text-lg font-semibold text-brand-blue">A Promise Born from Love, Dedicated to Every Baby.</p><div className="mt-6 flex items-center gap-2 text-brand-blue/40"><span className="h-px w-28 bg-brand-blue/20" /><Heart className="h-4 w-4" /><span className="h-px w-28 bg-brand-blue/20" /></div><p className="mt-6 max-w-xl text-sm font-medium leading-7 text-slate-700 sm:text-base">Baby Cure began with a simple thought - every baby deserves pure, gentle and safe care. As parents, we understand the love, worry and endless responsibility that comes with raising a little one. That is why we created Baby Cure - to give every parent the confidence that their baby is in the safest, most caring hands.</p><div className="mt-7 w-fit"><Logo /></div><Link to="/about" className="mt-6 inline-flex items-center gap-2 text-sm font-extrabold text-brand-blue transition hover:text-brand-green">Read our story <ArrowRight className="h-4 w-4" /></Link></div><div className="relative min-h-[360px] overflow-hidden sm:min-h-[500px]"><img src={familyImage} alt="Mother caring for her baby" className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" /><div className="absolute bottom-5 right-5 max-w-[270px] rounded-[1.5rem] bg-white/95 px-6 py-5 shadow-[0_18px_45px_rgba(23,50,77,.16)] backdrop-blur"><span className="font-display text-4xl leading-none text-brand-green">“</span><p className="mt-1 text-sm font-semibold leading-6 text-brand-ink">Our journey is built on trust, quality and the well-being of your baby.</p></div></div></div><div className="mt-10"><h3 className="text-center font-display text-2xl font-extrabold text-brand-blue sm:text-3xl">Our Journey <Heart className="mb-1 inline h-5 w-5 text-brand-green" /></h3><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{journey.map(([Icon, title, copy], index) => <div key={title} className="relative rounded-2xl border border-slate-100 bg-white px-4 py-5 text-center shadow-[0_10px_30px_rgba(74,166,217,.08)] lg:after:absolute lg:after:right-[-18px] lg:after:top-1/2 lg:after:h-px lg:after:w-9 lg:after:bg-brand-blue/35 lg:after:content-[''] lg:last:after:hidden"><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#eef8e9] text-brand-green"><Icon className="h-6 w-6" /></span><h4 className="mt-4 text-xs font-extrabold leading-5 text-brand-blue">{title}</h4><p className="mt-2 text-[11px] leading-5 text-slate-600">{copy}</p><span className="absolute left-1/2 top-[-9px] h-[18px] w-[18px] -translate-x-1/2 rounded-full border-4 border-[#fffdf8] bg-brand-blue/25 lg:hidden" />{index < journey.length - 1 && <span className="hidden" />}</div>)}</div></div></div></section>
 }
 
 function ProductDiscovery({ productArea, categories: items, activeCategory, onSelect, products: shown }) {

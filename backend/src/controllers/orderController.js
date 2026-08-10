@@ -4,14 +4,30 @@ const Cart = require('../models/Cart')
 const Order = require('../models/Order')
 const Product = require('../models/Product')
 const StockHistory = require('../models/StockHistory')
+const logger = require('../config/logger')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
 const { markCouponUsed, validateCoupon } = require('../utils/coupon')
-const { notifyUser } = require('../services/notificationService')
+const { buildInvoicePdf } = require('../utils/invoicePdf')
+const { notifyOrderEvent } = require('../services/orderNotificationService')
+const { trackShipmentByAWB } = require('../services/shiprocket.service')
 
 const cancellableStatuses = ['placed', 'processing']
+const cancellableDeliveryStatuses = ['placed', 'processing']
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
 const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
+const shiprocketStatusMap = {
+  shipped: 'shipped',
+  'in transit': 'in_transit',
+  'out for delivery': 'out_for_delivery',
+  delivered: 'delivered',
+  returned: 'returned',
+  rto: 'returned',
+  cancelled: 'failed',
+  failed: 'failed',
+  packed: 'packed',
+  manifest: 'packed',
+}
 
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -26,6 +42,111 @@ const populateOrder = (query) =>
     .populate('user', 'name email phone')
     .populate('shippingAddress')
     .populate('orderItems.product', 'name slug images price sku')
+
+const extractFirst = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
+
+const normalizeDeliveryStatus = (status = '') => {
+  const value = String(status).trim().toLowerCase().replace(/_/g, ' ')
+  return shiprocketStatusMap[value] || value.replace(/\s+/g, '_') || 'processing'
+}
+
+const syncOrderStatusFromDelivery = (order) => {
+  if (order.deliveryStatus === 'delivered') {
+    order.orderStatus = 'delivered'
+    order.deliveredAt = order.deliveredAt || new Date()
+    if (order.paymentMethod === 'COD') order.paymentStatus = 'paid'
+    return
+  }
+
+  if (order.deliveryStatus === 'out_for_delivery') {
+    order.orderStatus = 'out_for_delivery'
+    return
+  }
+
+  if (['shipped', 'in_transit'].includes(order.deliveryStatus)) {
+    order.orderStatus = 'shipped'
+    return
+  }
+
+  if (['processing', 'packed'].includes(order.deliveryStatus)) {
+    order.orderStatus = 'processing'
+  }
+}
+
+const pushTrackingHistory = (order, update = {}) => {
+  const normalized = normalizeDeliveryStatus(update.status || update.current_status || update.shipment_status)
+  const safeStatus = deliveryStatuses.includes(normalized) ? normalized : 'processing'
+  const updatedAt = update.updatedAt || update.updated_at || update.date || update.activity_date || new Date()
+  const last = order.trackingHistory[order.trackingHistory.length - 1]
+
+  if (last && last.status === safeStatus && String(new Date(last.updatedAt)) === String(new Date(updatedAt))) {
+    return safeStatus
+  }
+
+  order.trackingHistory.push({
+    status: safeStatus,
+    message: update.message || update.activity || update.status || update.current_status || `Shipment ${safeStatus.replace(/_/g, ' ')}`,
+    location: update.location || update.current_location || update.scan_location,
+    updatedAt,
+  })
+
+  return safeStatus
+}
+
+const syncTrackingFromShiprocketResponse = (order, response) => {
+  const data = response.tracking_data || response.data || response.response?.data || response
+  const shipment = data.shipment_track?.[0] || data.shipment_track || data
+  const activities = data.shipment_track_activities || data.activities || data.scans || []
+
+  order.courierName = extractFirst(shipment.courier_name, data.courier_name, order.courierName)
+  order.awbCode = String(extractFirst(shipment.awb_code, data.awb_code, order.awbCode) || '')
+  order.trackingId = order.awbCode || order.trackingId
+  order.trackingUrl = extractFirst(data.track_url, data.tracking_url, shipment.track_url, order.trackingUrl)
+  order.estimatedDeliveryDate = extractFirst(data.etd, shipment.edd, shipment.expected_delivery_date, order.estimatedDeliveryDate)
+  order.shipmentStatus = extractFirst(shipment.current_status, data.current_status, data.status, order.shipmentStatus)
+
+  const currentStatus = extractFirst(shipment.current_status, data.current_status, data.status)
+  if (currentStatus) {
+    order.deliveryStatus = pushTrackingHistory(order, {
+      status: currentStatus,
+      message: shipment.current_status || currentStatus,
+      location: shipment.current_location || data.current_location,
+      updatedAt: shipment.status_date || data.updated_at || new Date(),
+    })
+  }
+
+  activities.forEach((activity) => {
+    const status = pushTrackingHistory(order, {
+      status: activity['sr-status-label'] || activity.status || activity.activity,
+      message: activity.activity || activity.message || activity.status,
+      location: activity.location,
+      updatedAt: activity.date || activity.activity_date,
+    })
+    order.deliveryStatus = status
+  })
+
+  syncOrderStatusFromDelivery(order)
+}
+
+const autoSyncTrackingIfReady = async (order, { force = false } = {}) => {
+  const awbCode = order?.awbCode || order?.trackingId
+  if (!awbCode || order.deliveryStatus === 'delivered' || order.orderStatus === 'cancelled') return false
+
+  const lastSync = order.trackingSyncedAt ? new Date(order.trackingSyncedAt).getTime() : 0
+  const syncAgeMs = Date.now() - lastSync
+  if (!force && syncAgeMs < 60 * 1000) return false
+
+  try {
+    const response = await trackShipmentByAWB(awbCode)
+    syncTrackingFromShiprocketResponse(order, response)
+    order.trackingSyncedAt = new Date()
+    await order.save()
+    return true
+  } catch (error) {
+    logger.error({ error: error.message, orderId: order._id, awbCode }, 'Automatic Shiprocket tracking sync failed')
+    return false
+  }
+}
 
 const restoreOrderStock = async (order, session) => {
   await Promise.all(
@@ -165,13 +286,13 @@ const createOrder = asyncHandler(async (req, res) => {
 
     const populatedOrder = await populateOrder(Order.findById(order._id))
 
-    notifyUser({
-      userId: req.user._id,
+    await notifyOrderEvent({
+      user: populatedOrder.user,
+      order: populatedOrder,
       type: 'order_placed',
-      title: 'Order placed successfully',
-      message: `Your order ${order.orderNumber} has been placed.`,
-      metadata: { orderId: order._id, orderNumber: order.orderNumber },
-    }).catch(() => {})
+    }).catch((error) => {
+      logger.error({ error: error.message, orderId: order._id }, 'Unable to send order invoice email')
+    })
 
     res.status(201).json({
       success: true,
@@ -207,6 +328,8 @@ const getOrderById = asyncHandler(async (req, res) => {
     throw new AppError('Order not found.', 404)
   }
 
+  await autoSyncTrackingIfReady(order)
+
   res.status(200).json({
     success: true,
     order,
@@ -226,7 +349,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
         throw new AppError('Order not found.', 404)
       }
 
-      if (!cancellableStatuses.includes(order.orderStatus)) {
+      if (!cancellableStatuses.includes(order.orderStatus) || !cancellableDeliveryStatuses.includes(order.deliveryStatus || 'placed')) {
         throw new AppError('This order cannot be cancelled now.', 400)
       }
 
@@ -329,6 +452,7 @@ const getTrackingPayload = (order) => ({
   estimatedDeliveryDate: order.estimatedDeliveryDate,
   deliveryStatus: order.deliveryStatus,
   trackingHistory: order.trackingHistory,
+  trackingSyncedAt: order.trackingSyncedAt,
 })
 
 const getOrderTracking = asyncHandler(async (req, res) => {
@@ -337,17 +461,38 @@ const getOrderTracking = asyncHandler(async (req, res) => {
     : { _id: req.params.id, user: req.user._id }
 
   const order = await Order.findOne(filter).select(
-    'orderNumber orderStatus trackingId awbCode shiprocketOrderId shiprocketShipmentId courierName trackingUrl labelUrl pickupStatus shipmentStatus estimatedDeliveryDate deliveryStatus trackingHistory',
+    'orderNumber orderStatus trackingId awbCode shiprocketOrderId shiprocketShipmentId courierName trackingUrl labelUrl pickupStatus shipmentStatus estimatedDeliveryDate deliveryStatus trackingHistory trackingSyncedAt',
   )
 
   if (!order) {
     throw new AppError('Order not found.', 404)
   }
 
+  await autoSyncTrackingIfReady(order)
+
   res.status(200).json({
     success: true,
     tracking: getTrackingPayload(order),
   })
+})
+
+const downloadInvoice = asyncHandler(async (req, res) => {
+  const filter = req.user.role === 'admin'
+    ? { _id: req.params.id }
+    : { _id: req.params.id, user: req.user._id }
+
+  const order = await populateOrder(Order.findOne(filter))
+
+  if (!order) {
+    throw new AppError('Order not found.', 404)
+  }
+
+  const pdf = await buildInvoicePdf(order)
+
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename="${order.orderNumber}-invoice.pdf"`)
+  res.setHeader('Content-Length', pdf.length)
+  res.status(200).send(pdf)
 })
 
 const updateDeliveryTracking = asyncHandler(async (req, res) => {
@@ -397,37 +542,41 @@ const updateDeliveryTracking = asyncHandler(async (req, res) => {
   }
 
   await order.save()
+  const populatedOrder = await populateOrder(Order.findById(order._id))
 
   if (updates.deliveryStatus === 'shipped' || updates.deliveryStatus === 'in_transit') {
-    notifyUser({
-      userId: order.user,
+    await notifyOrderEvent({
+      user: populatedOrder.user,
+      order: populatedOrder,
       type: 'order_shipped',
-      title: 'Your order has shipped',
-      message: `Order ${order.orderNumber} is on the way.`,
-      metadata: { orderId: order._id, trackingId: order.trackingId },
-    }).catch(() => {})
+      metadata: { trackingId: order.trackingId },
+    }).catch((error) => {
+      logger.error({ error: error.message, orderId: order._id }, 'Unable to send shipping email')
+    })
   }
 
   if (updates.deliveryStatus === 'delivered') {
-    notifyUser({
-      userId: order.user,
+    await notifyOrderEvent({
+      user: populatedOrder.user,
+      order: populatedOrder,
       type: 'order_delivered',
-      title: 'Order delivered',
-      message: `Order ${order.orderNumber} has been delivered.`,
-      metadata: { orderId: order._id },
-    }).catch(() => {})
+    }).catch((error) => {
+      logger.error({ error: error.message, orderId: order._id }, 'Unable to send delivery email')
+    })
   }
 
   res.status(200).json({
     success: true,
     message: 'Delivery tracking updated successfully.',
     tracking: getTrackingPayload(order),
+    order: populatedOrder,
   })
 })
 
 module.exports = {
   cancelOrder,
   createOrder,
+  downloadInvoice,
   getAllOrders,
   getMyOrders,
   getOrderById,

@@ -52,6 +52,7 @@ const tabs = [
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
 const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -65,13 +66,13 @@ export default function AdminPage() {
       navigate('/login')
       return
     }
-    if (user?.role !== 'admin') {
+    if (!isAdminUser(user)) {
       toast.error('Admin access only')
       navigate('/')
     }
   }, [authLoading, isAuthenticated, navigate, user])
 
-  if (authLoading || !isAuthenticated || user?.role !== 'admin') return <PageSkeleton />
+  if (authLoading || !isAuthenticated || !isAdminUser(user)) return <PageSkeleton />
 
   return (
     <section className="mx-auto max-w-[1440px] px-3 py-4 sm:px-4 sm:py-6">

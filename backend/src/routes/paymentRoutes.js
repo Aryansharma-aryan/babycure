@@ -1,9 +1,11 @@
 const { Router } = require('express')
 
-const { createRazorpayOrder, verifyRazorpayPayment } = require('../controllers/paymentController')
+const { createRazorpayOrder, handleRazorpayWebhook, verifyRazorpayPayment } = require('../controllers/paymentController')
 const { protect } = require('../middlewares/authMiddleware')
 
 const router = Router()
+
+router.post('/razorpay/webhook', handleRazorpayWebhook)
 
 router.use(protect)
 

@@ -3,7 +3,7 @@ require('dotenv').config({ quiet: true })
 const app = require('./app')
 const connectDB = require('./config/db')
 
-const PORT = process.env.PORT || 5000
+const PORT = Number(process.env.PORT) || 5000
 
 let server
 
@@ -12,6 +12,16 @@ const startServer = async () => {
 
   server = app.listen(PORT, () => {
     console.log(`BabyCure API running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`)
+  })
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Stop the existing backend process before starting another one.`)
+      process.exit(1)
+    } else {
+      console.error(`Server error: ${error.message}`)
+      process.exit(1)
+    }
   })
 }
 

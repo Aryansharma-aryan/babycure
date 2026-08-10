@@ -1,6 +1,7 @@
 const Category = require('../models/Category')
 const Order = require('../models/Order')
 const Product = require('../models/Product')
+const ReturnRequest = require('../models/ReturnRequest')
 const User = require('../models/User')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
@@ -16,6 +17,13 @@ const getDashboard = asyncHandler(async (req, res) => {
     revenue,
     topSellingProducts,
     monthlySales,
+    dailySales,
+    orderStatusBreakdown,
+    paymentStatusBreakdown,
+    lowStockProducts,
+    returnRequestsCount,
+    openReturnRequests,
+    refundedOrders,
     recentOrders,
   ] = await Promise.all([
     User.countDocuments(),
@@ -53,6 +61,32 @@ const getDashboard = asyncHandler(async (req, res) => {
       { $sort: { '_id.year': 1, '_id.month': 1 } },
       { $limit: 12 },
     ]),
+    Order.aggregate([
+      { $match: { paymentStatus: 'paid', createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } },
+      {
+        $group: {
+          _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } },
+          revenue: { $sum: '$totalPrice' },
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
+    ]),
+    Order.aggregate([
+      { $group: { _id: '$orderStatus', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]),
+    Order.aggregate([
+      { $group: { _id: '$paymentStatus', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]),
+    Product.find({ stock: { $lte: 10 }, isActive: true })
+      .sort({ stock: 1 })
+      .limit(10)
+      .select('name stock price sku'),
+    ReturnRequest.countDocuments(),
+    ReturnRequest.countDocuments({ status: { $nin: ['closed', 'rejected', 'refund_completed', 'replacement_delivered'] } }),
+    Order.countDocuments({ paymentStatus: 'refunded' }),
     Order.find()
       .sort({ createdAt: -1 })
       .limit(8)
@@ -70,7 +104,16 @@ const getDashboard = asyncHandler(async (req, res) => {
       pendingOrders,
       paidOrders,
       revenue: revenue[0]?.total || 0,
+      averageOrderValue: paidOrders ? Math.round((revenue[0]?.total || 0) / paidOrders) : 0,
+      openReturnRequests,
+      refundedOrders,
+      returnRequestsCount,
+      lowStockCount: lowStockProducts.length,
     },
+    dailySales,
+    lowStockProducts,
+    orderStatusBreakdown,
+    paymentStatusBreakdown,
     recentOrders,
     topSellingProducts,
     monthlySales,

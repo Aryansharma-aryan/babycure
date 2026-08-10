@@ -4,6 +4,7 @@ const compression = require('compression')
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
 const express = require('express')
+const path = require('path')
 const mongoSanitize = require('express-mongo-sanitize')
 const rateLimit = require('express-rate-limit')
 const helmet = require('helmet')
@@ -26,6 +27,7 @@ const notificationRoutes = require('./routes/notificationRoutes')
 const paymentRoutes = require('./routes/paymentRoutes')
 const productRoutes = require('./routes/productRoutes')
 const reviewRoutes = require('./routes/reviewRoutes')
+const returnRequestRoutes = require('./routes/returnRequestRoutes')
 const shiprocketRoutes = require('./routes/shiprocketRoutes')
 const wishlistRoutes = require('./routes/wishlistRoutes')
 
@@ -36,14 +38,27 @@ const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || 'ht
   .map((origin) => origin.trim())
   .filter(Boolean)
 
+const isDevelopmentOrigin = (origin) => {
+  if (process.env.NODE_ENV !== 'development' || !origin) return false
+
+  try {
+    const url = new URL(origin)
+    return ['localhost', '127.0.0.1'].includes(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 app.set('trust proxy', 1)
 
-app.use(helmet())
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}))
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isDevelopmentOrigin(origin)) {
         return callback(null, true)
       }
 
@@ -68,12 +83,14 @@ app.use(
   }),
 )
 
+app.use('/api/payments/razorpay/webhook', express.raw({ type: 'application/json', limit: '1mb' }))
 app.use(express.json({ limit: '10kb' }))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 app.use(cookieParser())
 app.use(mongoSanitize())
 app.use(hpp())
 app.use(compression())
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'))
@@ -93,6 +110,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/payments', paymentRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/reviews', reviewRoutes)
+app.use('/api/returns', returnRequestRoutes)
 app.use('/api/shiprocket', shiprocketRoutes)
 app.use('/api/wishlist', wishlistRoutes)
 

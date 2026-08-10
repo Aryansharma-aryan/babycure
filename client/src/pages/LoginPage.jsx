@@ -10,6 +10,7 @@ import authImage from '../assets/babycure-hero-products.png'
 import { useAuth } from '../hooks/useAuth'
 
 const phonePattern = /^[6-9]\d{9}$/
+const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
 
 export default function LoginPage() {
   const [mode, setMode] = useState('login')
@@ -49,7 +50,7 @@ export default function LoginPage() {
     try {
       if (mode === 'login') {
         const response = await login({ email: data.email, password: data.password })
-        navigate(response.user?.role === 'admin' ? '/admin' : '/')
+        navigate(isAdminUser(response.user) ? '/admin' : '/')
         return
       } else {
         const response = await register({
@@ -58,7 +59,7 @@ export default function LoginPage() {
           phone: data.phone,
           password: data.password,
         })
-        navigate(response.user?.role === 'admin' ? '/admin' : '/')
+        navigate(isAdminUser(response.user) ? '/admin' : '/')
         return
       }
     } catch (error) {
@@ -100,7 +101,7 @@ export default function LoginPage() {
     setPending(true)
     try {
       const response = await verifyPhoneOtp({ phone, otp: data.otp })
-      navigate(response.user?.role === 'admin' ? '/admin' : '/')
+      navigate(isAdminUser(response.user) ? '/admin' : '/')
     } catch (error) {
       toast.error(error.message)
     } finally {

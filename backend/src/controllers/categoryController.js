@@ -28,7 +28,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
   const includeInactive = req.user?.role === 'admin' && req.query.includeInactive === 'true'
   const filter = includeInactive ? {} : { isActive: true }
 
-  const categories = await Category.find(filter).sort({ createdAt: -1 })
+  const categories = await Category.find(filter).sort({ createdAt: -1 }).lean()
 
   res.status(200).json({
     success: true,

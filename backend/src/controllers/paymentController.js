@@ -10,7 +10,8 @@ const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
 const { markCouponUsed, validateCoupon } = require('../utils/coupon')
 const { getRazorpayClient } = require('../config/razorpay')
-const { notifyUser } = require('../services/notificationService')
+const logger = require('../config/logger')
+const { notifyOrderEvent } = require('../services/orderNotificationService')
 
 const generateOrderNumber = () => {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -132,32 +133,11 @@ const createRazorpayOrder = asyncHandler(async (req, res) => {
   })
 })
 
-const verifyRazorpayPayment = asyncHandler(async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body
+const createPaidOrderFromSession = async ({ paymentSession, razorpayPaymentId, razorpaySignature }) => {
+  const userId = paymentSession.user?._id || paymentSession.user
 
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    throw new AppError('Invalid payment verification request.', 400)
-  }
-
-  const paymentSession = await PaymentSession.findOne({
-    razorpayOrderId: razorpay_order_id,
-    user: req.user._id,
-    status: 'pending',
-  })
-
-  if (!paymentSession) {
-    throw new AppError('Invalid payment verification request.', 400)
-  }
-
-  const expectedSignature = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-    .digest('hex')
-
-  if (expectedSignature !== razorpay_signature) {
-    paymentSession.status = 'failed'
-    await paymentSession.save()
-    throw new AppError('Payment verification failed.', 400)
+  if (paymentSession.order) {
+    return Order.findById(paymentSession.order).populate('user', 'name email phone').populate('shippingAddress')
   }
 
   const session = await mongoose.startSession()
@@ -165,10 +145,10 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
 
   try {
     await session.withTransaction(async () => {
-      const cart = await Cart.findOne({ user: req.user._id }).session(session)
+      const cart = await Cart.findOne({ user: userId }).session(session)
 
       if (!cart || cart.items.length === 0) {
-        throw new AppError('Cart is empty.', 400)
+        throw new AppError('Cart is empty. Unable to create paid order.', 409)
       }
 
       const totals = await getCartCheckoutTotals(cart, paymentSession.couponCode, session)
@@ -201,7 +181,7 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
               change: -item.quantity,
               reason: 'order_placed',
               note: `Paid order stock deduction for ${item.quantity} item(s)`,
-              changedBy: req.user._id,
+              changedBy: userId,
             },
           ],
           { session },
@@ -212,7 +192,7 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         [
           {
             orderNumber: generateOrderNumber(),
-            user: req.user._id,
+            user: userId,
             orderItems: totals.orderItems.map((item) => ({
               product: item.product._id,
               name: item.name,
@@ -230,9 +210,9 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
             totalPrice: totals.totalPrice,
             paymentMethod: 'ONLINE',
             paymentStatus: 'paid',
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
+            razorpayOrderId: paymentSession.razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature,
             orderStatus: 'placed',
           },
         ],
@@ -256,13 +236,51 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     session.endSession()
   }
 
-  notifyUser({
-    userId: order.user,
+  return Order.findById(order._id).populate('user', 'name email phone').populate('shippingAddress')
+}
+
+const verifyRazorpayPayment = asyncHandler(async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    throw new AppError('Invalid payment verification request.', 400)
+  }
+
+  const paymentSession = await PaymentSession.findOne({
+    razorpayOrderId: razorpay_order_id,
+    user: req.user._id,
+    status: 'pending',
+  })
+
+  if (!paymentSession) {
+    throw new AppError('Invalid payment verification request.', 400)
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex')
+
+  if (expectedSignature !== razorpay_signature) {
+    paymentSession.status = 'failed'
+    await paymentSession.save()
+    throw new AppError('Payment verification failed.', 400)
+  }
+
+  const order = await createPaidOrderFromSession({
+    paymentSession,
+    razorpayPaymentId: razorpay_payment_id,
+    razorpaySignature: razorpay_signature,
+  })
+
+  await notifyOrderEvent({
+    user: order.user,
+    order,
     type: 'payment_success',
-    title: 'Payment successful',
-    message: `Payment for order ${order.orderNumber} was successful.`,
-    metadata: { orderId: order._id, paymentId: razorpay_payment_id },
-  }).catch(() => {})
+    metadata: { paymentId: razorpay_payment_id },
+  }).catch((error) => {
+    logger.error({ error: error.message, orderId: order._id }, 'Unable to send payment invoice email')
+  })
 
   res.status(200).json({
     success: true,
@@ -271,7 +289,89 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   })
 })
 
+const handleRazorpayWebhook = asyncHandler(async (req, res) => {
+  const signature = req.get('x-razorpay-signature')
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET
+
+  if (!signature || !secret) {
+    throw new AppError('Webhook signature configuration is missing.', 400)
+  }
+
+  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}))
+  const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+
+  if (expectedSignature !== signature) {
+    throw new AppError('Invalid Razorpay webhook signature.', 400)
+  }
+
+  const event = JSON.parse(rawBody.toString('utf8'))
+  const payment = event.payload?.payment?.entity
+  const refund = event.payload?.refund?.entity
+
+  if (event.event === 'payment.captured' && payment?.order_id) {
+    const paymentSession = await PaymentSession.findOne({ razorpayOrderId: payment.order_id }).populate('user', 'name email phone')
+
+    if (paymentSession && paymentSession.status !== 'paid') {
+      const order = await createPaidOrderFromSession({
+        paymentSession,
+        razorpayPaymentId: payment.id,
+        razorpaySignature: signature,
+      })
+
+      await notifyOrderEvent({
+        user: order.user,
+        order,
+        type: 'payment_success',
+        metadata: { paymentId: payment.id, source: 'razorpay_webhook' },
+      }).catch((error) => {
+        logger.error({ error: error.message, orderId: order._id }, 'Unable to send webhook payment invoice email')
+      })
+    }
+  }
+
+  if (event.event === 'payment.failed' && payment?.order_id) {
+    const paymentSession = await PaymentSession.findOne({ razorpayOrderId: payment.order_id })
+    if (paymentSession && paymentSession.status === 'pending') {
+      paymentSession.status = 'failed'
+      await paymentSession.save()
+    }
+  }
+
+  if (event.event?.startsWith('refund.') && refund?.payment_id) {
+    const order = await Order.findOne({ razorpayPaymentId: refund.payment_id }).populate('user', 'name email phone').populate('shippingAddress')
+    if (order && ['processed', 'paid'].includes(refund.status)) {
+      order.paymentStatus = 'refunded'
+      await order.save()
+      await notifyOrderEvent({
+        user: order.user,
+        order,
+        type: 'refund_completed',
+        metadata: { refundId: refund.id, source: 'razorpay_webhook' },
+      }).catch((error) => {
+        logger.error({ error: error.message, orderId: order._id }, 'Unable to send refund email')
+      })
+    }
+  }
+
+  res.status(200).json({ success: true, message: 'Webhook processed.' })
+})
+
+const refundRazorpayPayment = async ({ paymentId, amount, notes = {} }) => {
+  if (!paymentId) {
+    throw new AppError('Razorpay payment ID is required for refund.', 400)
+  }
+
+  const razorpay = getRazorpayClient()
+  return razorpay.payments.refund(paymentId, {
+    amount: Math.round(Number(amount) * 100),
+    speed: 'normal',
+    notes,
+  })
+}
+
 module.exports = {
   createRazorpayOrder,
+  handleRazorpayWebhook,
+  refundRazorpayPayment,
   verifyRazorpayPayment,
 }

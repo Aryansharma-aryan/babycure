@@ -62,6 +62,7 @@ const getProductReviews = asyncHandler(async (req, res) => {
   const reviews = await Review.find({ product: req.params.productId })
     .populate('user', 'name')
     .sort({ createdAt: -1 })
+    .lean()
 
   res.status(200).json({
     success: true,

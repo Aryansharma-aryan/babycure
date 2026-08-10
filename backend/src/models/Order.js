@@ -212,6 +212,9 @@ const orderSchema = new mongoose.Schema(
       type: [trackingHistorySchema],
       default: [],
     },
+    trackingSyncedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

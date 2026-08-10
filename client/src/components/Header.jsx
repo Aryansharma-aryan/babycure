@@ -1,4 +1,4 @@
-import { Baby, BookOpen, CircleUserRound, FlaskConical, Heart, Headphones, Menu, PackageCheck, ShieldCheck, ShoppingBag, Truck, X } from 'lucide-react'
+import { Baby, BookOpen, CircleUserRound, Heart, Headphones, LogOut, Menu, PackageCheck, ShieldCheck, ShoppingBag, Truck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { categories } from '../data/products'
@@ -11,17 +11,17 @@ import SearchBar from './SearchBar'
 const publicNavLinks = [
   { label: 'Home', to: '/', Icon: Baby },
   { label: 'About', to: '/about', Icon: BookOpen },
-  { label: 'Ingredients', to: '/category?search=natural', Icon: FlaskConical },
   { label: 'Products', to: '/category', Icon: ShoppingBag },
   { label: 'Contact', to: '/contact', Icon: Headphones },
   { label: 'Why Baby Cure', to: '/why-baby-cure', Icon: ShieldCheck },
 ]
+const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { cartCount, totals } = useCart()
   const { isAuthenticated, logout, user } = useAuth()
-  const navLinks = user?.role === 'admin' ? [...publicNavLinks, { label: 'Admin', to: '/admin', Icon: ShieldCheck }] : publicNavLinks
+  const navLinks = isAdminUser(user) ? [...publicNavLinks, { label: 'Admin', to: '/admin', Icon: ShieldCheck }] : publicNavLinks
 
   useEffect(() => {
     if (!menuOpen) return undefined
@@ -45,7 +45,8 @@ export default function Header() {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Link to="/wishlist" className="hidden h-10 w-10 place-items-center rounded-full text-brand-ink transition hover:bg-brand-mist hover:text-brand-blue lg:grid" aria-label="Wishlist"><Heart className="h-[19px] w-[19px]" /></Link>
           <Link to="/orders" className="hidden h-10 w-10 place-items-center rounded-full text-brand-ink transition hover:bg-brand-mist hover:text-brand-blue xl:grid" aria-label="Orders"><PackageCheck className="h-[19px] w-[19px]" /></Link>
-          <Link to={user?.role === 'admin' ? '/admin' : isAuthenticated ? '/account' : '/login'} className="hidden items-center gap-2 border-l border-slate-200 px-3 py-1 text-sm font-extrabold text-brand-ink transition hover:text-brand-blue lg:flex"><span className="grid h-9 w-9 place-items-center rounded-full bg-brand-mist text-brand-blue"><CircleUserRound className="h-5 w-5" /></span><span className="max-w-[120px] truncate">{isAuthenticated ? user?.name || 'Account' : 'Account'}</span></Link>
+          <Link to={isAdminUser(user) ? '/admin' : isAuthenticated ? '/account' : '/login'} className="hidden items-center gap-2 border-l border-slate-200 px-3 py-1 text-sm font-extrabold text-brand-ink transition hover:text-brand-blue lg:flex"><span className="grid h-9 w-9 place-items-center rounded-full bg-brand-mist text-brand-blue"><CircleUserRound className="h-5 w-5" /></span><span className="max-w-[120px] truncate">{isAuthenticated ? user?.name || 'Account' : 'Account'}</span></Link>
+          {isAuthenticated && <button type="button" onClick={logout} className="hidden items-center gap-1.5 border border-red-200 bg-red-50 px-3 py-2 text-sm font-extrabold text-red-600 transition hover:border-red-300 hover:bg-red-100 lg:flex"><LogOut className="h-4 w-4" /> Logout</button>}
           <Link to="/cart" className="relative flex items-center gap-2 border-l border-slate-200 py-1 pl-3 text-brand-ink transition hover:text-brand-blue sm:pl-4" aria-label="Shopping bag"><span className="relative grid h-10 w-10 place-items-center rounded-full bg-brand-mist"><ShoppingBag className="h-5 w-5" />{cartCount > 0 && <span className="absolute right-0 top-0 grid h-4 w-4 place-items-center rounded-full bg-brand-blue text-[9px] font-extrabold text-white">{cartCount}</span>}</span><span className="hidden text-left text-[11px] font-bold leading-4 sm:block"><span className="block uppercase tracking-[.1em] text-slate-400">Bag</span>{formatPrice(totals.total)}</span></Link>
           <button className="ml-1 grid h-10 w-10 place-items-center border border-slate-200 text-brand-ink transition hover:border-brand-blue hover:text-brand-blue lg:hidden" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>

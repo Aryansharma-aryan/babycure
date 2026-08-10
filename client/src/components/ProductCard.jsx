@@ -2,7 +2,7 @@ import { Heart, ShoppingBag } from 'lucide-react'
 import { memo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
-import { wishlistService } from '../api/services'
+import { productService, wishlistService } from '../api/services'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
@@ -39,6 +39,12 @@ function ProductCard({ product }) {
     || (normalizedName.includes('wipe') ? 'wipes' : normalizedName.includes('oil') ? 'spray' : normalizedName.includes('lotion') ? 'lotion' : normalizedName.includes('cream') ? 'tube' : normalizedName.includes('powder') ? 'powder' : 'pump')
   const visual = visualAssets[visualType] || visualAssets.pump
 
+  const resolveProduct = async () => {
+    if (/^[a-f\d]{24}$/i.test(productId || '')) return product
+    const response = await productService.get(productId)
+    return response.product
+  }
+
   const handleAdd = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to add products to your bag')
@@ -47,7 +53,7 @@ function ProductCard({ product }) {
     }
     setBusy(true)
     try {
-      await addToCart(product)
+      await addToCart(await resolveProduct())
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -62,7 +68,8 @@ function ProductCard({ product }) {
       return
     }
     try {
-      await wishlistService.toggleAdd(productId)
+      const resolvedProduct = await resolveProduct()
+      await wishlistService.toggleAdd(getProductId(resolvedProduct))
       toast.success('Saved to wishlist')
     } catch (error) {
       toast.error(error.message)

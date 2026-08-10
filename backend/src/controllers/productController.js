@@ -172,7 +172,9 @@ const getProductById = asyncHandler(async (req, res) => {
     ? { _id: req.params.id }
     : { slug: req.params.id }
 
-  const product = await Product.findOne({ ...query, isActive: true }).populate('category', 'name slug')
+  const product = await Product.findOne({ ...query, isActive: true })
+    .populate('category', 'name slug')
+    .lean()
 
   if (!product) {
     throw new AppError('Product not found.', 404)
