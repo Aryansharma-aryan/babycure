@@ -6,6 +6,7 @@ import Logo from '../components/Logo'
 import { categories, products } from '../data/products'
 import heroProducts from '../assets/babycure-hero-products.png'
 import familyImage from '../assets/hero.png'
+import newHeroImage from '../assets/newPhoto.jfif'
 
 export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
@@ -15,7 +16,7 @@ export default function HomePage() {
 
   return (
     <main className="overflow-hidden bg-white text-brand-ink">
-      <Hero />
+      <HeroWithPastedProducts />
       <TrustBar />
       <OurStory />
       <ProductDiscovery productArea={productArea} categories={availableCategories} activeCategory={activeCategory} onSelect={setActiveCategory} products={visibleProducts} />
@@ -32,7 +33,34 @@ function Hero() {
     [Droplets, 'Daily Care', 'Essentials', 'text-[#efb94f]'],
   ]
 
-  return <section className="relative isolate bg-[#eaf8fb]" aria-label="Welcome to Baby Cure"><img src={heroProducts} alt="Baby Cure baby-care products" className="absolute inset-0 h-full w-full object-cover object-[69%_center]" loading="eager" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.99)_0%,rgba(247,255,245,.97)_42%,rgba(255,255,255,.38)_65%,rgba(255,255,255,.04)_82%)]" /><div className="relative mx-auto flex min-h-[650px] max-w-7xl items-center px-4 py-12 sm:min-h-[720px] lg:px-6"><div className="max-w-[610px]"><p className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/75 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-brand-green backdrop-blur"><Leaf className="h-3.5 w-3.5" /> Welcome to Baby Cure</p><h1 className="mt-6 font-display text-5xl font-extrabold leading-[.98] tracking-[-.05em] text-brand-ink sm:text-6xl lg:text-[72px]">Welcome to <span className="block text-brand-green">Baby Cure</span></h1><p className="mt-5 text-base font-extrabold text-brand-ink sm:text-lg">Gentle by nature, pure by care.</p><p className="mt-4 max-w-lg text-sm font-medium leading-7 text-slate-600 sm:text-base">At Baby Cure, we understand that your baby deserves the purest care. Our thoughtfully crafted products are made with natural ingredients to nurture, protect, and pamper your little one every day.</p><div className="mt-7 grid max-w-lg grid-cols-2 gap-3 border-y border-slate-200/80 py-5 sm:grid-cols-4">{highlights.map(([Icon, lineOne, lineTwo, iconColor]) => <div key={`${lineOne}-${lineTwo}`} className="text-center"><span className={`mx-auto grid h-9 w-9 place-items-center ${iconColor}`}><Icon className="h-7 w-7" /></span><p className="mt-1 text-[11px] font-extrabold leading-4 text-brand-ink"><span className="block">{lineOne}</span>{lineTwo}</p></div>)}</div><p className="mt-4 text-sm font-bold text-slate-600">Because every baby deserves the best.</p><div className="mt-7 flex flex-wrap gap-3"><Link to="/category" className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_28px_rgba(74,166,217,.24)] transition hover:-translate-y-px hover:bg-brand-ink">Shop Now <ArrowRight className="h-4 w-4" /></Link><Link to="/category" className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/80 px-6 py-3.5 text-sm font-extrabold text-brand-green transition hover:border-brand-green hover:bg-white">Explore Collection</Link></div></div></div></section>
+  return <section className="relative isolate overflow-hidden bg-[#eaf8fb]" aria-label="Welcome to Baby Cure"><img src={familyImage} alt="Baby Cure products with a mother and baby" className="absolute inset-0 h-full w-full object-cover object-[69%_center]" loading="eager" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.88)_0%,rgba(247,255,245,.78)_38%,rgba(255,255,255,.22)_62%,rgba(255,255,255,.02)_82%)]" /><div className="relative mx-auto flex min-h-[650px] max-w-7xl items-center px-4 py-12 sm:min-h-[720px] lg:px-6"><div className="max-w-[610px]"><p className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/75 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-brand-green backdrop-blur"><Leaf className="h-3.5 w-3.5" /> Welcome to Baby Cure</p><h1 className="mt-6 font-display text-5xl font-extrabold leading-[.98] tracking-[-.05em] text-brand-ink sm:text-6xl lg:text-[72px]">Welcome to <span className="block text-brand-green">Baby Cure</span></h1><p className="mt-5 text-base font-extrabold text-brand-ink sm:text-lg">Gentle by nature, pure by care.</p><p className="mt-4 max-w-lg text-sm font-medium leading-7 text-slate-600 sm:text-base">At Baby Cure, we understand that your baby deserves the purest care. Our thoughtfully crafted products are made with natural ingredients to nurture, protect, and pamper your little one every day.</p><div className="mt-7 grid max-w-lg grid-cols-2 gap-3 border-y border-slate-200/80 py-5 sm:grid-cols-4">{highlights.map(([Icon, lineOne, lineTwo, iconColor]) => <div key={`${lineOne}-${lineTwo}`} className="text-center"><span className={`mx-auto grid h-9 w-9 place-items-center ${iconColor}`}><Icon className="h-7 w-7" /></span><p className="mt-1 text-[11px] font-extrabold leading-4 text-brand-ink"><span className="block">{lineOne}</span>{lineTwo}</p></div>)}</div><p className="mt-4 text-sm font-bold text-slate-600">Because every baby deserves the best.</p><div className="mt-7 flex flex-wrap gap-3"><Link to="/category" className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_28px_rgba(74,166,217,.24)] transition hover:-translate-y-px hover:bg-brand-ink">Shop Now <ArrowRight className="h-4 w-4" /></Link><Link to="/category" className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/80 px-6 py-3.5 text-sm font-extrabold text-brand-green transition hover:border-brand-green hover:bg-white">Explore Collection</Link></div></div></div></section>
+}
+
+function HeroWithPastedProducts() {
+  const highlights = [
+    [Leaf, 'Natural', 'Ingredients', 'text-[#67c788]'],
+    [ShieldCheck, 'Safe &', 'Gentle', 'text-[#4aa6d9]'],
+    [Heart, 'Trusted By', 'Parents', 'text-[#ef7fa7]'],
+    [Droplets, 'Daily Care', 'Essentials', 'text-[#efb94f]'],
+  ]
+
+  return (
+    <section className="relative isolate overflow-hidden bg-[#eaf8fb]" aria-label="Welcome to Baby Cure">
+      <img src={newHeroImage} alt="BabyCure gentle baby care" className="absolute inset-0 h-full w-full object-cover object-center" loading="eager" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.94)_0%,rgba(247,255,245,.82)_38%,rgba(255,255,255,.2)_62%,rgba(255,255,255,.02)_86%)]" />
+      <div className="relative mx-auto flex min-h-[680px] max-w-7xl items-center px-4 py-10 sm:min-h-[720px] sm:py-12 lg:min-h-[720px] lg:px-6">
+        <div className="w-full max-w-[610px] rounded-[1.5rem] border border-white/70 bg-white/72 p-5 shadow-[0_18px_50px_rgba(23,50,77,.08)] backdrop-blur-[2px] sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
+          <p className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/85 px-4 py-2 text-[10px] font-black uppercase tracking-[.16em] text-brand-green shadow-sm sm:text-[11px]"><Leaf className="h-3.5 w-3.5" /> Welcome to Baby Cure</p>
+          <h1 className="mt-5 font-display text-[2.7rem] font-black leading-[.98] tracking-[-.03em] text-brand-ink sm:mt-6 sm:text-6xl lg:text-[72px]">Welcome to <span className="block text-brand-green">Baby Cure</span></h1>
+          <p className="mt-4 text-base font-black text-brand-ink sm:mt-5 sm:text-lg">Gentle by nature, pure by care.</p>
+          <p className="mt-3 max-w-lg text-sm font-bold leading-6 text-slate-700 sm:mt-4 sm:text-base sm:leading-7">At Baby Cure, we understand that your baby deserves the purest care. Our thoughtfully crafted products are made with natural ingredients to nurture, protect, and pamper your little one every day.</p>
+          <div className="mt-7 grid max-w-lg grid-cols-2 gap-3 border-y border-slate-200/80 py-5 sm:grid-cols-4">{highlights.map(([Icon, lineOne, lineTwo, iconColor]) => <div key={`${lineOne}-${lineTwo}`} className="text-center"><span className={`mx-auto grid h-9 w-9 place-items-center ${iconColor}`}><Icon className="h-7 w-7" /></span><p className="mt-1 text-[11px] font-extrabold leading-4 text-brand-ink"><span className="block">{lineOne}</span>{lineTwo}</p></div>)}</div>
+          <p className="mt-4 text-sm font-black text-slate-700">Because every baby deserves the best.</p>
+          <div className="mt-6 flex flex-wrap gap-3 sm:mt-7"><Link to="/category" className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(74,166,217,.24)] transition hover:-translate-y-px hover:bg-brand-ink sm:px-6 sm:py-3.5">Shop Now <ArrowRight className="h-4 w-4" /></Link><Link to="/category" className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/90 px-5 py-3 text-sm font-black text-brand-green transition hover:border-brand-green hover:bg-white sm:px-6 sm:py-3.5">Explore Collection</Link></div>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function TrustBar() {

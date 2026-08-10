@@ -4,6 +4,9 @@ const {
   assignAWB,
   createShiprocketOrder,
   generateLabel,
+  getCheapestCourier,
+  getOrderWeight,
+  getServiceability,
   schedulePickup,
   trackShipmentByAWB,
 } = require('../services/shiprocket.service')
@@ -142,6 +145,42 @@ const getShipmentId = (order) => {
   return order.shiprocketShipmentId
 }
 
+const assignOrderAwb = async (order, courierCompanyId) => {
+  const response = await assignAWB(order.shiprocketShipmentId, courierCompanyId)
+  const data = response.response?.data || response.data || response
+
+  if (response.awb_assign_status === 0 || data.awb_assign_error) {
+    throw new AppError(data.awb_assign_error || response.message || 'Shiprocket could not assign an AWB.', 400)
+  }
+
+  order.awbCode = String(extractFirst(data.awb_code, data.awb, data.awbCode, order.awbCode) || '')
+  if (!order.awbCode) throw new AppError('Shiprocket did not return an AWB number.', 502)
+
+  order.trackingId = order.awbCode
+  order.courierName = extractFirst(data.courier_name, data.assigned_courier_name, order.courierName)
+  order.trackingUrl = extractFirst(data.tracking_url, data.track_url, order.trackingUrl)
+  order.shipmentStatus = extractFirst(data.status, response.message, order.shipmentStatus)
+  order.deliveryStatus = order.deliveryStatus === 'placed' ? 'processing' : order.deliveryStatus
+  pushTrackingHistory(order, {
+    status: order.deliveryStatus,
+    message: `AWB assigned${order.courierName ? ` with ${order.courierName}` : ''}.`,
+  })
+  return response
+}
+
+const scheduleOrderPickupForOrder = async (order) => {
+  const response = await schedulePickup(order.shiprocketShipmentId)
+  order.pickupStatus = extractFirst(response.pickup_status, response.status, response.message, 'Requested')
+  order.shipmentStatus = extractFirst(response.shipment_status, response.status, order.shipmentStatus)
+  pushTrackingHistory(order, {
+    status: order.deliveryStatus === 'placed' ? 'processing' : order.deliveryStatus,
+    message: 'Pickup requested with Shiprocket.',
+    location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Pickup location',
+  })
+  syncOrderStatus(order)
+  return response
+}
+
 const getTrackingPayload = (order) => ({
   shiprocketOrderId: order.shiprocketOrderId,
   shiprocketShipmentId: order.shiprocketShipmentId,
@@ -195,11 +234,31 @@ const createShipment = asyncHandler(async (req, res) => {
     location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Pickup location',
   })
   syncOrderStatus(order)
+  let autoCourier = null
+  let autoPickup = null
+
+  if (process.env.SHIPROCKET_AUTO_PICKUP !== 'false') {
+    const weight = Number(getOrderWeight(order).toFixed(2))
+    const maxWeight = Number(process.env.SHIPROCKET_AUTO_MAX_WEIGHT_KG || 0.5)
+    const pickupPostcode = process.env.SHIPROCKET_PICKUP_PINCODE
+    const serviceability = pickupPostcode && weight <= maxWeight
+      ? await getServiceability({
+        pickupPostcode,
+        deliveryPostcode: order.shippingAddress.postalCode,
+        weight,
+        cod: order.paymentMethod === 'COD',
+      })
+      : null
+    autoCourier = getCheapestCourier(serviceability)
+    await assignOrderAwb(order, autoCourier?.courier_company_id)
+    autoPickup = await scheduleOrderPickupForOrder(order)
+  }
+
   await order.save()
 
   res.status(201).json({
     success: true,
-    message: 'Shiprocket shipment created successfully.',
+    message: autoPickup ? `Shipment created, ${autoCourier?.courier_name || 'lowest-cost courier'} assigned and pickup requested.` : 'Shiprocket shipment created successfully.',
     order: await populateOrder(Order.findById(order._id)),
     shiprocket: response,
   })
@@ -207,28 +266,7 @@ const createShipment = asyncHandler(async (req, res) => {
 
 const assignAwbToOrder = asyncHandler(async (req, res) => {
   const order = await getOrderForShipment(req.params.orderId)
-  const response = await assignAWB(getShipmentId(order))
-  const data = response.response?.data || response.data || response
-
-  if (response.awb_assign_status === 0 || data.awb_assign_error) {
-    throw new AppError(data.awb_assign_error || response.message || 'Shiprocket could not assign an AWB.', 400)
-  }
-
-  order.awbCode = String(extractFirst(data.awb_code, data.awb, data.awbCode, order.awbCode) || '')
-
-  if (!order.awbCode) {
-    throw new AppError('Shiprocket did not return an AWB number.', 502)
-  }
-
-  order.trackingId = order.awbCode || order.trackingId
-  order.courierName = extractFirst(data.courier_name, data.courier_company_id, data.assigned_courier_name, order.courierName)
-  order.trackingUrl = extractFirst(data.tracking_url, data.track_url, order.trackingUrl)
-  order.shipmentStatus = extractFirst(data.status, response.message, order.shipmentStatus)
-  order.deliveryStatus = order.deliveryStatus === 'placed' ? 'processing' : order.deliveryStatus
-  pushTrackingHistory(order, {
-    status: order.deliveryStatus,
-    message: `AWB assigned${order.courierName ? ` with ${order.courierName}` : ''}.`,
-  })
+  const response = await assignOrderAwb(order)
   await order.save()
 
   res.status(200).json({
@@ -263,16 +301,7 @@ const generateOrderLabel = asyncHandler(async (req, res) => {
 
 const scheduleOrderPickup = asyncHandler(async (req, res) => {
   const order = await getOrderForShipment(req.params.orderId)
-  const response = await schedulePickup(getShipmentId(order))
-
-  order.pickupStatus = extractFirst(response.pickup_status, response.status, response.message, 'Requested')
-  order.shipmentStatus = extractFirst(response.shipment_status, response.status, order.shipmentStatus)
-  pushTrackingHistory(order, {
-    status: order.deliveryStatus === 'placed' ? 'processing' : order.deliveryStatus,
-    message: 'Pickup requested with Shiprocket.',
-    location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Pickup location',
-  })
-  syncOrderStatus(order)
+  const response = await scheduleOrderPickupForOrder(order)
   await order.save()
 
   res.status(200).json({

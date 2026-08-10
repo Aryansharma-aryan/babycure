@@ -137,6 +137,30 @@ const getOrderWeight = (order) => {
   return Math.max(Number(weight.toFixed(2)), 0.1)
 }
 
+const getServiceability = async ({ pickupPostcode, deliveryPostcode, weight, cod = false }) => {
+  const params = new URLSearchParams({
+    pickup_postcode: String(pickupPostcode),
+    delivery_postcode: String(deliveryPostcode),
+    weight: String(weight),
+    cod: cod ? '1' : '0',
+  })
+
+  return shiprocketFetch(`/courier/serviceability/?${params.toString()}`)
+}
+
+const getCheapestCourier = (response) => {
+  const data = response?.data || response?.response?.data || response
+  const couriers = data?.available_courier_companies || data?.courier_companies || []
+
+  return couriers
+    .filter((courier) => courier?.courier_company_id && Number.isFinite(Number(courier.freight_charge ?? courier.rate)))
+    .sort((left, right) => {
+      const priceDifference = Number(left.freight_charge ?? left.rate) - Number(right.freight_charge ?? right.rate)
+      if (priceDifference !== 0) return priceDifference
+      return Number(left.etd ?? left.estimated_delivery_days ?? 999) - Number(right.etd ?? right.estimated_delivery_days ?? 999)
+    })[0] || null
+}
+
 const buildShiprocketOrderPayload = (order) => {
   const address = order.shippingAddress
   const { firstName, lastName } = getCustomerNameParts(address?.fullName || order.user?.name)
@@ -252,10 +276,13 @@ const createReplacementShipment = async (order, request) => {
   return createShiprocketOrder(replacementOrder)
 }
 
-const assignAWB = async (shipmentId) =>
+const assignAWB = async (shipmentId, courierCompanyId) =>
   shiprocketFetch('/courier/assign/awb', {
     method: 'POST',
-    body: { shipment_id: shipmentId },
+    body: {
+      shipment_id: shipmentId,
+      ...(courierCompanyId ? { courier_id: courierCompanyId } : {}),
+    },
   })
 
 const generateLabel = async (shipmentId) =>
@@ -277,6 +304,9 @@ module.exports = {
   createReplacementShipment,
   createReturnPickup,
   createShiprocketOrder,
+  getCheapestCourier,
+  getOrderWeight,
+  getServiceability,
   generateLabel,
   loginToShiprocket,
   schedulePickup,

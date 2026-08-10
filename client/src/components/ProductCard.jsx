@@ -8,19 +8,17 @@ import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
 import { getProductId, getProductImage } from '../utils/products'
 import Rating from './Rating'
-import babycureProductVisual from '../assets/babycure-hero-products.png'
-import babycureCareVisual from '../assets/babycure-hero-ai.png'
-import shampooVisual from '../assets/about-products-promise.png'
-import lotionVisual from '../assets/heroo.png'
-import bathVisual from '../assets/about-mother-baby-care.png'
+import shampooMomVisual from '../assets/about-babycure-family-v2.png'
+import bathMomVisual from '../assets/about-mother-baby-care.png'
+import productMomVisual from '../assets/babycure-hero-products.png'
 
 const visualAssets = {
-  pump: { src: shampooVisual, position: '42% 64%', size: 'cover' },
-  lotion: { src: lotionVisual, position: '72% 68%', size: 'cover' },
-  tube: { src: babycureCareVisual, position: '96% 76%', size: '300%' },
-  wipes: { src: babycureProductVisual, position: '82% 72%', size: '300%' },
-  spray: { src: babycureCareVisual, position: '75% 76%', size: '300%' },
-  powder: { src: bathVisual, position: '20% 74%', size: '300%' },
+  pump: { src: shampooMomVisual, position: '58% 54%', size: 'cover' },
+  lotion: { src: bathMomVisual, position: '68% 52%', size: 'cover' },
+  tube: { src: productMomVisual, position: '68% 60%', size: 'cover' },
+  wipes: { src: productMomVisual, position: '72% 60%', size: 'cover' },
+  spray: { src: bathMomVisual, position: '70% 50%', size: 'cover' },
+  powder: { src: shampooMomVisual, position: '60% 52%', size: 'cover' },
 }
 
 function ProductCard({ product }) {
