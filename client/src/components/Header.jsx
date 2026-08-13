@@ -34,7 +34,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-[0_4px_16px_rgba(23,50,77,.06)]">
       <div className="hidden bg-brand-ink text-white md:block">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-1 text-[10px] font-bold uppercase tracking-[.13em]">
-          <span className="flex items-center gap-2 text-white/90"><Truck className="h-3.5 w-3.5 text-brand-green" /> Complimentary delivery on orders above ₹499</span>
+          <span className="flex items-center gap-2 text-white/90"><Truck className="h-3.5 w-3.5 text-brand-green" /> Free delivery on orders above ₹799 · ₹60 below ₹799</span>
           <div className="flex items-center gap-2"><Link to="/orders" className="flex items-center gap-1.5 rounded-full border border-brand-green/45 bg-brand-green/15 px-3 py-1 text-white shadow-[0_2px_8px_rgba(0,0,0,.12)] transition hover:-translate-y-px hover:bg-brand-green/30"><PackageCheck className="h-3.5 w-3.5 text-brand-green" /> Track order</Link><Link to="/contact" className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-white shadow-[0_2px_8px_rgba(0,0,0,.12)] transition hover:-translate-y-px hover:bg-white/20"><Headphones className="h-3.5 w-3.5 text-brand-blue" /> Care support</Link></div>
         </div>
       </div>

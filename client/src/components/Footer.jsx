@@ -63,12 +63,11 @@ export default function Footer() {
           </div>
         </div>
         <FooterLinks title="Shop" items={[
-          ['Baby Care', '/category?search=Baby%20Care'],
-          ['Skin Care', '/category?search=Skin%20Care'],
-          ['Diapering', '/category?search=Diapering'],
-          ['Feeding', '/category?search=Feeding'],
-          ['Toys & Accessories', '/category?search=Toys'],
-          ['Gift Sets', '/category?search=Gift%20Sets'],
+          ['Baby Shampoo', '/category?search=Baby%20Shampoo'],
+          ['Baby Body Wash', '/category?search=Baby%20Body%20Wash'],
+          ['Baby Lotion', '/category?search=Baby%20Lotion'],
+          ['Baby Diaper Rash Cream', '/category?search=Baby%20Diaper%20Rash%20Cream'],
+          ['Baby Massage Oil', '/category?search=Baby%20Massage%20Oil'],
         ]} />
         <FooterLinks title="Help" items={[
           ['Track Order', '/orders'],

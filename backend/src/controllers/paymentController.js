@@ -19,7 +19,7 @@ const generateOrderNumber = () => {
   return `BC-${timestamp}-${random}`
 }
 
-const getShippingPrice = (itemsPrice) => (itemsPrice > 999 ? 0 : 40)
+const getShippingPrice = (itemsPrice) => (itemsPrice > 799 ? 0 : 60)
 
 const getCartCheckoutTotals = async (cart, couponCode, session) => {
   const orderItems = []

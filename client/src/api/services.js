@@ -22,8 +22,10 @@ export const categoryService = {
 export const productService = {
   list: (params) => api.get(`/products${buildQuery(params)}`),
   get: (id) => api.get(`/products/${id}`),
-  create: (payload) => api.post('/products', payload, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update: (id, payload) => api.put(`/products/${id}`, payload, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  // Leave the Content-Type to the browser/Axios so it includes the multipart
+  // boundary required for product image uploads.
+  create: (payload) => api.post('/products', payload),
+  update: (id, payload) => api.put(`/products/${id}`, payload),
   remove: (id) => api.delete(`/products/${id}`),
   reviews: (id) => api.get(`/products/${id}/reviews`),
   createReview: (id, payload) => api.post(`/products/${id}/reviews`, payload),

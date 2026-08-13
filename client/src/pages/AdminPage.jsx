@@ -53,6 +53,8 @@ const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'd
 const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
+const allowedCategoryNamesArray = ['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil']
+const allowedCategoryNames = new Set(allowedCategoryNamesArray)
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -421,6 +423,8 @@ function ProductsPanel() {
   const [categories, setCategories] = useState([])
   const [editing, setEditing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [editingImages, setEditingImages] = useState([])
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -430,7 +434,7 @@ function ProductsPanel() {
         categoryService.list({ includeInactive: 'true' }),
       ])
       setProducts(productResponse.products || [])
-      setCategories(categoryResponse.categories || [])
+      setCategories((categoryResponse.categories || []).filter((category) => allowedCategoryNames.has(category.name)))
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -446,23 +450,87 @@ function ProductsPanel() {
     event.preventDefault()
     const form = event.currentTarget
     const data = Object.fromEntries(new FormData(form))
+    // Validate required fields and show inline errors
+    const requiredFields = ['name', 'description', 'price', 'category', 'sku']
+    const missing = {}
+    requiredFields.forEach((f) => {
+      if (!data[f]) missing[f] = 'This field is required'
+    })
+    if (Object.keys(missing).length) {
+      setFieldErrors(missing)
+      toast.error('Please fill required fields')
+      return
+    }
+    const shortDescriptionWords = String(data.shortDescription || '').trim().split(/\s+/).filter(Boolean)
+    if (shortDescriptionWords.length > 80) {
+      toast.error('Short description cannot exceed 80 words')
+      return
+    }
+    // Validate images before submit
+    // Count existing slot images (from editingImages) and pending file inputs
+    const slotImagesCount = (editingImages || []).filter(Boolean).length
+    let pendingFilesCount = 0
+    for (let i = 0; i < 4; i++) {
+      const file = form.elements[`imageFile${i}`]?.files?.[0]
+      if (file) pendingFilesCount += 1
+    }
+    const totalImages = Math.max(slotImagesCount, 0) + pendingFilesCount
+    if (totalImages === 0) {
+      toast.error('Please upload at least one product image (use the image slots)')
+      return
+    }
     const payload = new FormData()
-    ;['name', 'description', 'shortDescription', 'price', 'mrp', 'category', 'stock', 'sku', 'brand'].forEach((field) => payload.append(field, data[field] || ''))
+    ;['name', 'description', 'shortDescription', 'keyFeatures', 'specifications', 'benefits', 'howToUse', 'price', 'mrp', 'category', 'sku', 'brand'].forEach((field) => payload.append(field, data[field] || ''))
+    // The storefront uses stock > 0 for availability. Keep that implementation
+    // detail out of the admin form and use a simple availability choice instead.
+    payload.append('stock', data.availability === 'in_stock' ? '1000' : '0')
     payload.append('isFeatured', Boolean(data.isFeatured))
     payload.append('isActive', data.isActive !== 'false')
-    if (data.imageUrl) payload.append('images', data.imageUrl)
-    const file = form.elements.imageFile?.files?.[0]
-    if (file) payload.append('images', file)
+    // Append up to 4 slot-based images: each slot can be a file (imageFile{i}) or a URL (imageUrl{i})
+    for (let i = 0; i < 4; i++) {
+      const url = data[`imageUrl${i}`]
+      if (url) payload.append(`imageUrl${i}`, url)
+      const file = form.elements[`imageFile${i}`]?.files?.[0]
+      if (file) payload.append(`imageFile${i}`, file)
+    }
+    // primaryIndex indicates which slot should be the primary image (0-based)
+    if (data.primaryIndex) payload.append('primaryIndex', data.primaryIndex)
+    else payload.append('primaryIndex', '0')
 
     try {
-      if (editing?._id) await productService.update(editing._id, payload)
-      else await productService.create(payload)
-      toast.success(editing ? 'Product updated' : 'Product created')
-      setEditing(null)
-      form.reset()
-      load()
+      const response = editing?._id
+        ? await productService.update(editing._id, payload)
+        : await productService.create(payload)
+
+      const warning = response?.uploadWarning
+      if (warning) {
+        // Map warning fields to fieldErrors (show inline, no repeated toast)
+        const errors = {}
+        if (warning.fields && warning.fields.length) {
+          warning.fields.forEach((f) => { errors[f] = warning.message || 'Unexpected file field' })
+        }
+        setFieldErrors(errors)
+      } else {
+        toast.success(editing ? 'Product updated' : 'Product created')
+        setEditing(null)
+        setEditingImages([])
+        form.reset()
+        setFieldErrors({})
+        load()
+      }
     } catch (error) {
-      toast.error(error.message)
+      const serverData = error?.data || error?.response?.data
+      const warning = serverData?.uploadWarning
+      if (warning) {
+        const errors = {}
+        if (warning.fields && warning.fields.length) {
+          warning.fields.forEach((f) => { errors[f] = warning.message || 'Unexpected file field' })
+        }
+        setFieldErrors(errors)
+        // Do not show repeated toasts for upload warnings; inline errors suffice
+        return
+      }
+      toast.error(error.message || 'An error occurred')
     }
   }
 
@@ -480,49 +548,144 @@ function ProductsPanel() {
 
   return (
     <div className="space-y-6">
-      <Panel title={editing ? 'Edit Product' : 'Add Product'} action={editing && <Button variant="ghost" onClick={() => setEditing(null)}>New Product</Button>}>
+      <Panel title={editing ? 'Edit Product' : 'Add Product'} action={editing && <Button variant="ghost" onClick={() => { setEditing(null); setEditingImages([]); setFieldErrors({}) }}>New Product</Button>}>
         <form onSubmit={saveProduct} className="grid gap-4 md:grid-cols-2">
-          <Input label="Name" name="name" defaultValue={editing?.name || ''} required />
-          <Input label="SKU" name="sku" defaultValue={editing?.sku || ''} required />
-          <Input label="Price" name="price" type="number" defaultValue={editing?.price || ''} required />
+          <Input label="Name" name="name" defaultValue={editing?.name || ''} required error={fieldErrors.name} />
+          <Input label="SKU" name="sku" defaultValue={editing?.sku || ''} required error={fieldErrors.sku} />
+          <Input label="Price" name="price" type="number" defaultValue={editing?.price || ''} required error={fieldErrors.price} />
           <Input label="MRP" name="mrp" type="number" defaultValue={editing?.mrp || ''} />
-          <Input label="Stock" name="stock" type="number" defaultValue={editing?.stock || ''} required />
+          <label className="text-sm font-black text-slate-700">Availability
+            <select name="availability" defaultValue={editing ? (editing.stock > 0 ? 'in_stock' : 'out_of_stock') : 'in_stock'} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue">
+              <option value="in_stock">In stock</option>
+              <option value="out_of_stock">Out of stock</option>
+            </select>
+          </label>
           <Input label="Brand" name="brand" defaultValue={editing?.brand || 'Babycure'} />
           <label className="text-sm font-black text-slate-700">Category
-            <select name="category" defaultValue={editing?.category?._id || editing?.category || ''} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue" required>
+            <select name="category" defaultValue={editing?.category?._id || editing?.category || ''} className={`mt-2 w-full rounded-md px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue ${fieldErrors.category ? 'border border-red-400' : 'border border-slate-200'}`} required>
               <option value="">Select category</option>
               {categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}
             </select>
+            {fieldErrors.category && <p className="mt-1 text-xs text-red-600">{fieldErrors.category}</p>}
           </label>
-          <Input label="Image URL" name="imageUrl" defaultValue={getProductImage(editing) || ''} />
-          <label className="text-sm font-black text-slate-700">Upload Image
-            <input name="imageFile" type="file" accept="image/*" className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold" />
-          </label>
+          <ImageManager editing={editing} images={editingImages} setImages={setEditingImages} fieldErrors={fieldErrors} />
           <label className="md:col-span-2 text-sm font-black text-slate-700">Short Description
             <textarea name="shortDescription" defaultValue={editing?.shortDescription || ''} className="mt-2 w-full rounded-md border border-slate-200 p-4 text-sm font-bold outline-none focus:border-brand-blue" rows="2" />
           </label>
           <label className="md:col-span-2 text-sm font-black text-slate-700">Description
-            <textarea name="description" defaultValue={editing?.description || ''} className="mt-2 w-full rounded-md border border-slate-200 p-4 text-sm font-bold outline-none focus:border-brand-blue" rows="4" required />
+            <textarea name="description" defaultValue={editing?.description || ''} className={`mt-2 w-full rounded-md p-4 text-sm font-bold outline-none focus:border-brand-blue ${fieldErrors.description ? 'border border-red-400' : 'border border-slate-200'}`} rows="4" required />
+            {fieldErrors.description && <p className="mt-1 text-xs text-red-600">{fieldErrors.description}</p>}
           </label>
+          <TextArea label="Key Features" name="keyFeatures" defaultValue={editing?.keyFeatures || ''} />
+          <TextArea label="Specifications" name="specifications" defaultValue={editing?.specifications || ''} />
+          <TextArea label="Benefits" name="benefits" defaultValue={editing?.benefits || ''} />
+          <TextArea label="How To Use" name="howToUse" defaultValue={editing?.howToUse || ''} />
           <label className="flex items-center gap-2 text-sm font-bold text-slate-600"><input name="isFeatured" type="checkbox" defaultChecked={Boolean(editing?.isFeatured)} /> Featured</label>
           <label className="flex items-center gap-2 text-sm font-bold text-slate-600"><input name="isActive" type="checkbox" defaultChecked={editing?.isActive !== false} /> Active</label>
           <Button type="submit" className="md:col-span-2">{editing ? 'Update Product' : 'Create Product'}</Button>
         </form>
       </Panel>
       <Panel title="Manage Products" action={<Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button>}>
-        <Table headers={['Image', 'Product', 'Category', 'Price', 'Stock', 'Actions']}>
+        <Table headers={['Image', 'Product', 'Category', 'Price', 'Availability', 'Actions']}>
           {products.map((product) => (
             <tr key={product._id}>
               <Td>{getProductImage(product) && <img src={getProductImage(product)} alt={product.name} className="h-12 w-12 rounded object-cover" />}</Td>
               <Td>{product.name}</Td>
               <Td>{product.category?.name}</Td>
               <Td>{formatPrice(product.price)}</Td>
-              <Td>{product.stock}</Td>
-              <Td><RowActions onEdit={() => setEditing(product)} onDelete={() => removeProduct(product._id)} /></Td>
+              <Td>{product.stock > 0 ? 'In stock' : 'Out of stock'}</Td>
+              <Td><RowActions onEdit={() => { setEditing(product); setEditingImages(product.images || []); setFieldErrors({}) }} onDelete={() => removeProduct(product._id)} /></Td>
             </tr>
           ))}
         </Table>
       </Panel>
+    </div>
+  )
+}
+
+function TextArea({ label, name, defaultValue }) {
+  const [value, setValue] = useState(defaultValue || '')
+  useEffect(() => setValue(defaultValue || ''), [defaultValue])
+  return <label className="md:col-span-2 text-sm font-black text-slate-700">{label}
+    <p className="mt-1 text-xs font-semibold text-slate-500">Paste text here—its headings, lists, bold text, and line breaks will be kept.</p>
+    <div contentEditable suppressContentEditableWarning onInput={(event) => setValue(event.currentTarget.innerHTML)} dangerouslySetInnerHTML={{ __html: value }} className="mt-2 min-h-28 w-full whitespace-pre-wrap rounded-md border border-slate-200 p-4 text-sm font-medium outline-none focus:border-brand-blue" />
+    <input type="hidden" name={name} value={value} />
+  </label>
+}
+
+function ImageManager({ images, setImages, fieldErrors = {} }) {
+  // Render four explicit image slots with file input, URL input and primary selector
+  const setSlotUrl = (index, url) => setImages((current) => {
+    const next = [...current]
+    next[index] = { url }
+    return next
+  })
+
+  const removeSlot = (index) => setImages((current) => {
+    const next = [...current]
+    next[index] = undefined
+    return next
+  })
+
+  const move = (from, to) => setImages((current) => {
+    const next = [...current]
+    const [image] = next.splice(from, 1)
+    next.splice(to, 0, image)
+    return next
+  })
+
+  return (
+    <div className="md:col-span-2 rounded-md border border-sky-100 bg-sky-50 p-4">
+      <p className="text-sm font-black text-slate-700">Product images</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">Upload or provide a URL for each slot. Choose which image is primary.</p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="relative rounded border border-slate-200 bg-white p-2">
+            <div className="h-28 w-full overflow-hidden rounded">
+              {images?.[i]?.url ? <img src={resolveMediaUrl(images[i].url)} alt={`Product ${i + 1}`} className="h-full w-full object-cover" /> : <div className="flex h-28 w-full items-center justify-center bg-slate-50 text-sm text-slate-400">Slot {i + 1}</div>}
+            </div>
+            <div className="mt-2 space-y-2">
+              <input
+                name={`imageFile${i}`}
+                type="file"
+                accept="image/*"
+                className={`w-full text-sm ${fieldErrors[`imageFile${i}`] ? 'border border-red-500' : ''}`}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  const preview = URL.createObjectURL(file)
+                  setImages((current) => {
+                    const next = Array.isArray(current) ? [...current] : []
+                    const prev = next[i]?.url
+                    // Revoke previous blob URL if we created it earlier
+                    try {
+                      if (prev && String(prev).startsWith('blob:')) URL.revokeObjectURL(prev)
+                    } catch (e) {
+                      // ignore
+                    }
+                    next[i] = { ...(next[i] || {}), url: preview }
+                    return next
+                  })
+                }}
+              />
+              <input
+                name={`imageUrl${i}`}
+                defaultValue={images?.[i]?.url || ''}
+                placeholder="Image URL"
+                className={`mt-1 w-full rounded-md px-3 py-2 text-sm ${fieldErrors[`imageUrl${i}`] ? 'border border-red-500' : 'border border-slate-200'}`}
+                onChange={(event) => setSlotUrl(i, event.target.value)}
+              />
+              {(fieldErrors[`imageFile${i}`] || fieldErrors[`imageUrl${i}`]) && (
+                <p className="mt-1 text-xs text-red-600">{fieldErrors[`imageFile${i}`] || fieldErrors[`imageUrl${i}`]}</p>
+              )}
+              <div className="flex items-center justify-between">
+                <label className="text-xs">Primary <input type="radio" name="primaryIndex" value={i} defaultChecked={i === 0} className="ml-2" /></label>
+                {images?.[i]?.url && <button type="button" onClick={() => removeSlot(i)} className="text-xs text-red-600">Remove</button>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -534,7 +697,7 @@ function CategoriesPanel() {
   const load = useCallback(async () => {
     try {
       const response = await categoryService.list({ includeInactive: 'true' })
-      setCategories(response.categories || [])
+      setCategories((response.categories || []).filter((category) => allowedCategoryNames.has(category.name)))
     } catch (error) {
       toast.error(error.message)
     }
@@ -574,7 +737,12 @@ function CategoriesPanel() {
     <div className="space-y-6">
       <Panel title={editing ? 'Edit Category' : 'Add Category'}>
         <form onSubmit={saveCategory} className="grid gap-4 md:grid-cols-2">
-          <Input label="Name" name="name" defaultValue={editing?.name || ''} required />
+          <label className="text-sm font-black text-slate-700">Name
+            <select name="name" defaultValue={editing?.name || ''} className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-brand-blue" required>
+              <option value="">Select category</option>
+              {allowedCategoryNamesArray.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </label>
           <Input label="Image URL" name="image" defaultValue={editing?.image || ''} />
           <label className="md:col-span-2 text-sm font-black text-slate-700">Description
             <textarea name="description" defaultValue={editing?.description || ''} className="mt-2 w-full rounded-md border border-slate-200 p-4 text-sm font-bold outline-none focus:border-brand-blue" rows="3" />

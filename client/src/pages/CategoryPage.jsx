@@ -14,7 +14,13 @@ const sortOptions = [
   ['-ratingsAverage', 'Top Rated'],
 ]
 
-const hiddenCategoryNames = new Set(['Toys & Accessories', 'Gift Sets'])
+const allowedCategoryNames = new Set([
+  'Baby Shampoo',
+  'Baby Body Wash',
+  'Baby Lotion',
+  'Baby Diaper Rash Cream',
+  'Baby Massage Oil',
+])
 
 export default function CategoryPage() {
   const [params, setParams] = useSearchParams()
@@ -27,8 +33,8 @@ export default function CategoryPage() {
   const [search, setSearch] = useState(params.get('search') || '')
   const loadMoreRef = useRef(null)
   const debouncedSearch = useDebounce(search)
-  const visibleCategories = useMemo(() => categories.filter((category) => !hiddenCategoryNames.has(category.name)), [categories])
-  const visibleProducts = useMemo(() => products.filter((product) => !hiddenCategoryNames.has(product.category?.name || product.categoryName)), [products])
+  const visibleCategories = useMemo(() => categories.filter((category) => allowedCategoryNames.has(category.name)), [categories])
+  const visibleProducts = useMemo(() => products.filter((product) => allowedCategoryNames.has(product.category?.name || product.categoryName)), [products])
 
   const filters = useMemo(() => ({
     search: debouncedSearch,
@@ -101,7 +107,7 @@ export default function CategoryPage() {
   return (
     <section className="bg-white pb-10">
       <div className="overflow-hidden rounded-b-[1.2rem] bg-gradient-to-r from-brand-green via-brand-blue to-brand-green px-4 py-3 text-center text-xs font-extrabold text-white shadow-[0_18px_50px_rgba(74,166,217,0.18)] sm:text-sm">
-        <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Gentle everyday care, with free delivery on orders above {'\u20B9'}499</span>
+        <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Gentle everyday care, with free delivery above {'\u20B9'}799 and {'\u20B9'}60 delivery below.</span>
       </div>
 
       <div className="mx-auto max-w-[1320px] px-4 pt-5">

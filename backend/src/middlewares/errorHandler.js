@@ -5,7 +5,13 @@ const errorHandler = (err, req, res, next) => {
 
   if (error.name === 'MulterError') {
     statusCode = 400
-    error = new Error(error.code === 'LIMIT_FILE_COUNT' ? 'Maximum 5 images are allowed.' : error.message)
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      error = new Error('Maximum 5 images are allowed.')
+    } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      error = new Error('One or more uploaded files used unexpected field names. Use the provided image upload slots (imageFile0..3) or the images field.')
+    } else {
+      error = new Error(error.message)
+    }
   }
 
   if (error.name === 'ValidationError') {
@@ -37,6 +43,7 @@ const errorHandler = (err, req, res, next) => {
     success: false,
     message: error.message || 'Internal server error',
     ...(isProduction ? {} : { stack: error.stack }),
+    ...(req.uploadWarning ? { uploadWarning: req.uploadWarning } : {}),
   })
 }
 

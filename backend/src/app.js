@@ -73,7 +73,10 @@ app.use(
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 100,
+    // Product lists, cart refreshes and navigation are read-only requests.
+    // Do not count those against customers' action quota.
+    skip: (req) => process.env.NODE_ENV !== 'production' || ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+    limit: 500,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     message: {
@@ -90,7 +93,12 @@ app.use(cookieParser())
 app.use(mongoSanitize())
 app.use(hpp())
 app.use(compression())
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
+// Product-upload filenames are unique, so they can be cached aggressively by
+// browsers and CDNs instead of being downloaded again on every visit.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+  maxAge: '1y',
+  immutable: true,
+}))
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'))

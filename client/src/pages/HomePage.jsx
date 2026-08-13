@@ -1,25 +1,46 @@
 import { ArrowRight, Baby, ChevronRight, Droplets, Globe2, Heart, Leaf, ShieldCheck, Truck } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import Logo from '../components/Logo'
-import { categories, products } from '../data/products'
+import { categoryService, productService } from '../api/services'
 import heroProducts from '../assets/babycure-hero-products.png'
+import newBanner from '../assets/newBanner.jfif'
 import familyImage from '../assets/hero.png'
-import newHeroImage from '../assets/newPhoto.jfif'
+
+const bannerImage = newBanner
+const allowedCategoryNames = new Set(['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil'])
 
 export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')
+  const [categories, setCategories] = useState([])
+  const [products, setProducts] = useState([])
   const productArea = useRef(null)
-  const availableCategories = categories.filter((category) => category.id !== 'toys' && category.id !== 'gift-sets')
-  const visibleProducts = useMemo(() => products.filter((product) => activeCategory === 'all' || product.category === activeCategory).slice(0, 6), [activeCategory])
+
+  useEffect(() => {
+    let active = true
+    Promise.all([categoryService.list(), productService.list({ limit: 50 })])
+      .then(([categoryResponse, productResponse]) => {
+        if (!active) return
+        setCategories((categoryResponse.categories || []).filter((category) => allowedCategoryNames.has(category.name)))
+        setProducts(productResponse.products || [])
+      })
+      .catch(() => {
+        if (!active) return
+        setCategories([])
+        setProducts([])
+      })
+    return () => { active = false }
+  }, [])
+
+  const visibleProducts = useMemo(() => products.filter((product) => activeCategory === 'all' || String(product.category?._id || product.category) === activeCategory), [activeCategory, products])
 
   return (
     <main className="overflow-hidden bg-white text-brand-ink">
       <HeroWithPastedProducts />
       <TrustBar />
       <OurStory />
-      <ProductDiscovery productArea={productArea} categories={availableCategories} activeCategory={activeCategory} onSelect={setActiveCategory} products={visibleProducts} />
+      <ProductDiscovery productArea={productArea} categories={categories} activeCategory={activeCategory} onSelect={setActiveCategory} products={visibleProducts} />
       <BrandStory />
     </main>
   )
@@ -34,6 +55,7 @@ function Hero() {
   ]
 
   return <section className="relative isolate overflow-hidden bg-[#eaf8fb]" aria-label="Welcome to Baby Cure"><img src={familyImage} alt="Baby Cure products with a mother and baby" className="absolute inset-0 h-full w-full object-cover object-[69%_center]" loading="eager" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.88)_0%,rgba(247,255,245,.78)_38%,rgba(255,255,255,.22)_62%,rgba(255,255,255,.02)_82%)]" /><div className="relative mx-auto flex min-h-[650px] max-w-7xl items-center px-4 py-12 sm:min-h-[720px] lg:px-6"><div className="max-w-[610px]"><p className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/75 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-brand-green backdrop-blur"><Leaf className="h-3.5 w-3.5" /> Welcome to Baby Cure</p><h1 className="mt-6 font-display text-5xl font-extrabold leading-[.98] tracking-[-.05em] text-brand-ink sm:text-6xl lg:text-[72px]">Welcome to <span className="block text-brand-green">Baby Cure</span></h1><p className="mt-5 text-base font-extrabold text-brand-ink sm:text-lg">Gentle by nature, pure by care.</p><p className="mt-4 max-w-lg text-sm font-medium leading-7 text-slate-600 sm:text-base">At Baby Cure, we understand that your baby deserves the purest care. Our thoughtfully crafted products are made with natural ingredients to nurture, protect, and pamper your little one every day.</p><div className="mt-7 grid max-w-lg grid-cols-2 gap-3 border-y border-slate-200/80 py-5 sm:grid-cols-4">{highlights.map(([Icon, lineOne, lineTwo, iconColor]) => <div key={`${lineOne}-${lineTwo}`} className="text-center"><span className={`mx-auto grid h-9 w-9 place-items-center ${iconColor}`}><Icon className="h-7 w-7" /></span><p className="mt-1 text-[11px] font-extrabold leading-4 text-brand-ink"><span className="block">{lineOne}</span>{lineTwo}</p></div>)}</div><p className="mt-4 text-sm font-bold text-slate-600">Because every baby deserves the best.</p><div className="mt-7 flex flex-wrap gap-3"><Link to="/category" className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_28px_rgba(74,166,217,.24)] transition hover:-translate-y-px hover:bg-brand-ink">Shop Now <ArrowRight className="h-4 w-4" /></Link><Link to="/category" className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/80 px-6 py-3.5 text-sm font-extrabold text-brand-green transition hover:border-brand-green hover:bg-white">Explore Collection</Link></div></div></div></section>
+    return <section className="relative isolate overflow-hidden bg-[#eaf8fb]" aria-label="Welcome to Baby Cure"><img src={bannerImage} alt="Baby Cure products with a mother and baby" className="absolute inset-0 h-full w-full object-cover object-[69%_center]" loading="eager" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.88)_0%,rgba(247,255,245,.78)_38%,rgba(255,255,255,.22)_62%,rgba(255,255,255,.02)_82%)]" /><div className="relative mx-auto flex min-h-[650px] max-w-7xl items-center px-4 py-12 sm:min-h-[720px] lg:px-6"><div className="max-w-[610px]"><p className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/75 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-brand-green backdrop-blur"><Leaf className="h-3.5 w-3.5" /> Welcome to Baby Cure</p><h1 className="mt-6 font-display text-5xl font-extrabold leading-[.98] tracking-[-.05em] text-brand-ink sm:text-6xl lg:text-[72px]">Welcome to <span className="block text-brand-green">Baby Cure</span></h1><p className="mt-5 text-base font-extrabold text-brand-ink sm:text-lg">Gentle by nature, pure by care.</p><p className="mt-4 max-w-lg text-sm font-medium leading-7 text-slate-600 sm:text-base">At Baby Cure, we understand that your baby deserves the purest care. Our thoughtfully crafted products are made with natural ingredients to nurture, protect, and pamper your little one every day.</p><div className="mt-7 grid max-w-lg grid-cols-2 gap-3 border-y border-slate-200/80 py-5 sm:grid-cols-4">{highlights.map(([Icon, lineOne, lineTwo, iconColor]) => <div key={`${lineOne}-${lineTwo}`} className="text-center"><span className={`mx-auto grid h-9 w-9 place-items-center ${iconColor}`}><Icon className="h-7 w-7" /></span><p className="mt-1 text-[11px] font-extrabold leading-4 text-brand-ink"><span className="block">{lineOne}</span>{lineTwo}</p></div>)}</div><p className="mt-4 text-sm font-bold text-slate-600">Because every baby deserves the best.</p><div className="mt-7 flex flex-wrap gap-3"><Link to="/category" className="inline-flex items-center gap-2 rounded-full bg-brand-blue px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_28px_rgba(74,166,217,.24)] transition hover:-translate-y-px hover:bg-brand-ink">Shop Now <ArrowRight className="h-4 w-4" /></Link><Link to="/category" className="inline-flex items-center gap-2 rounded-full border border-brand-green/50 bg-white/80 px-6 py-3.5 text-sm font-extrabold text-brand-green transition hover:border-brand-green hover:bg-white">Explore Collection</Link></div></div></div></section>
 }
 
 function HeroWithPastedProducts() {
@@ -46,7 +68,7 @@ function HeroWithPastedProducts() {
 
   return (
     <section className="relative isolate overflow-hidden bg-[#eaf8fb]" aria-label="Welcome to Baby Cure">
-      <img src={newHeroImage} alt="BabyCure gentle baby care" className="absolute inset-0 h-full w-full object-cover object-center" loading="eager" />
+      <img src={bannerImage} alt="Baby Cure products with a mother and baby" className="absolute inset-0 h-full w-full object-cover object-[69%_center]" loading="eager" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,252,252,.94)_0%,rgba(247,255,245,.82)_38%,rgba(255,255,255,.2)_62%,rgba(255,255,255,.02)_86%)]" />
       <div className="relative mx-auto flex min-h-[680px] max-w-7xl items-center px-4 py-10 sm:min-h-[720px] sm:py-12 lg:min-h-[720px] lg:px-6">
         <div className="w-full max-w-[610px] rounded-[1.5rem] border border-white/70 bg-white/72 p-5 shadow-[0_18px_50px_rgba(23,50,77,.08)] backdrop-blur-[2px] sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
@@ -64,7 +86,7 @@ function HeroWithPastedProducts() {
 }
 
 function TrustBar() {
-  const points = [[ShieldCheck, 'Gentle everyday care', 'For delicate little ones'], [Leaf, 'Thoughtfully selected', 'Comfort-first essentials'], [Truck, `Free delivery \u20B9499+`, 'Delivered with care'], [Heart, 'Care support', 'Here when you need us']]
+  const points = [[ShieldCheck, 'Gentle everyday care', 'For delicate little ones'], [Leaf, 'Thoughtfully selected', 'Comfort-first essentials'], [Truck, `Free delivery above \u20B9799`, '\u20B960 delivery below \u20B9799'], [Heart, 'Care support', 'Here when you need us']]
   return <section className="border-b border-slate-100 bg-white"><div className="mx-auto grid max-w-7xl divide-y divide-slate-100 px-5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-6">{points.map(([Icon, title, text]) => <div key={title} className="flex items-center gap-3 py-5 sm:px-5 lg:px-6"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-mist text-brand-blue"><Icon className="h-5 w-5" /></span><div><h3 className="text-sm font-extrabold text-brand-ink">{title}</h3><p className="mt-0.5 text-xs font-medium text-slate-500">{text}</p></div></div>)}</div></section>
 }
 
@@ -81,9 +103,9 @@ function OurStory() {
 }
 
 function ProductDiscovery({ productArea, categories: items, activeCategory, onSelect, products: shown }) {
-  const categoryButtons = [['all', 'All essentials'], ...items.map((category) => [category.id, category.title])]
+  const categoryButtons = [['all', 'All essentials'], ...items.map((category) => [category._id, category.name])]
 
-  return <section ref={productArea} className="scroll-mt-28 bg-[#f7fafb] py-14 sm:py-20"><div className="mx-auto max-w-7xl px-4 lg:px-6"><SectionTitle eyebrow="Most loved essentials" title="A little care, beautifully chosen" action="Shop the full collection" /><div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:hidden">{categoryButtons.map(([id, title]) => <button key={id} type="button" onClick={() => onSelect(id)} className={`min-w-0 rounded-xl px-3 py-2.5 text-sm font-extrabold transition ${activeCategory === id ? 'bg-brand-ink text-white shadow-[0_10px_24px_rgba(23,50,77,.16)]' : 'border border-sky-100 bg-white text-brand-ink hover:border-brand-blue hover:text-brand-blue'}`}>{title}</button>)}</div><div className="mt-7 grid min-w-0 gap-6 lg:grid-cols-[248px_minmax(0,1fr)]"><aside className="hidden self-start lg:sticky lg:top-[142px] lg:block"><div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-[0_18px_45px_rgba(74,166,217,.10)]"><div className="border-b border-sky-100 bg-brand-mist px-5 py-5"><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-brand-green">Browse BabyCure</p><h3 className="mt-1 text-lg font-extrabold text-brand-ink">Shop by category</h3></div><div className="p-3">{categoryButtons.map(([id, title]) => <button key={id} type="button" onClick={() => onSelect(id)} className={`mt-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-extrabold transition ${activeCategory === id ? 'bg-brand-ink text-white shadow-[0_8px_18px_rgba(23,50,77,.14)]' : 'text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}><span>{title}</span><ChevronRight className="h-4 w-4" /></button>)}</div><div className="border-t border-sky-100 px-5 py-4"><p className="flex items-center gap-2 text-xs font-bold text-slate-500"><Truck className="h-4 w-4 text-brand-green" /> Free delivery {'\u20B9'}499+</p></div></div></aside><div className="min-w-0"><div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">{shown.map((product) => <ProductCard key={product.id} product={product} />)}</div><div className="mt-9 text-center"><Link to="/category" className="inline-flex items-center gap-2 rounded-xl border border-brand-ink/20 bg-white px-5 py-3 text-sm font-extrabold text-brand-ink transition hover:border-brand-blue hover:text-brand-blue">Explore all care <ArrowRight className="h-4 w-4" /></Link></div></div></div></div></section>
+  return <section ref={productArea} className="scroll-mt-28 bg-[#f7fafb] py-14 sm:py-20"><div className="mx-auto max-w-7xl px-4 lg:px-6"><SectionTitle eyebrow="Most loved essentials" title="A little care, beautifully chosen" action="Shop the full collection" /><div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:hidden">{categoryButtons.map(([id, title]) => <button key={id} type="button" onClick={() => onSelect(id)} className={`min-w-0 rounded-xl px-3 py-2.5 text-sm font-extrabold transition ${activeCategory === id ? 'bg-brand-ink text-white shadow-[0_10px_24px_rgba(23,50,77,.16)]' : 'border border-sky-100 bg-white text-brand-ink hover:border-brand-blue hover:text-brand-blue'}`}>{title}</button>)}</div><div className="mt-7 grid min-w-0 gap-6 lg:grid-cols-[248px_minmax(0,1fr)]"><aside className="hidden self-start lg:sticky lg:top-[142px] lg:block"><div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-[0_18px_45px_rgba(74,166,217,.10)]"><div className="border-b border-sky-100 bg-brand-mist px-5 py-5"><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-brand-green">Browse BabyCure</p><h3 className="mt-1 text-lg font-extrabold text-brand-ink">Shop by category</h3></div><div className="p-3">{categoryButtons.map(([id, title]) => <button key={id} type="button" onClick={() => onSelect(id)} className={`mt-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-extrabold transition ${activeCategory === id ? 'bg-brand-ink text-white shadow-[0_8px_18px_rgba(23,50,77,.14)]' : 'text-brand-ink hover:bg-brand-mist hover:text-brand-blue'}`}><span>{title}</span><ChevronRight className="h-4 w-4" /></button>)}</div><div className="border-t border-sky-100 px-5 py-4"><p className="flex items-center gap-2 text-xs font-bold text-slate-500"><Truck className="h-4 w-4 text-brand-green" /> Free delivery {'\u20B9'}499+</p></div></div></aside><div className="min-w-0">{shown.length > 0 ? <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">{shown.map((product) => <ProductCard key={product._id} product={product} />)}</div> : <div className="rounded-2xl border border-sky-100 bg-white p-10 text-center text-sm font-bold text-slate-500">No products in this category yet.</div>}<div className="mt-9 text-center"><Link to="/category" className="inline-flex items-center gap-2 rounded-xl border border-brand-ink/20 bg-white px-5 py-3 text-sm font-extrabold text-brand-ink transition hover:border-brand-blue hover:text-brand-blue">Explore all care <ArrowRight className="h-4 w-4" /></Link></div></div></div></div></section>
 }
 
 function BrandStory() {

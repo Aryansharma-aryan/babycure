@@ -23,8 +23,15 @@ const productSchema = new mongoose.Schema(
     shortDescription: {
       type: String,
       trim: true,
-      maxlength: [220, 'Short description cannot exceed 220 characters'],
+      validate: {
+        validator: (value) => !value || value.trim().split(/\s+/).filter(Boolean).length <= 80,
+        message: 'Short description cannot exceed 80 words',
+      },
     },
+    keyFeatures: { type: String, trim: true, default: '' },
+    specifications: { type: String, trim: true, default: '' },
+    benefits: { type: String, trim: true, default: '' },
+    howToUse: { type: String, trim: true, default: '' },
     price: {
       type: Number,
       required: [true, 'Product price is required'],
@@ -61,13 +68,13 @@ const productSchema = new mongoose.Schema(
         },
       ],
       validate: {
-        validator: (images) => images.length <= 5,
-        message: 'A product can have a maximum of 5 images',
+        validator: (images) => images.length <= 4,
+        message: 'A product can have a maximum of 4 images',
       },
     },
     stock: {
       type: Number,
-      default: 0,
+      default: 1000,
       min: [0, 'Stock cannot be negative'],
     },
     sku: {

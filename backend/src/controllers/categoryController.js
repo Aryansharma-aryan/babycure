@@ -2,12 +2,15 @@ const Category = require('../models/Category')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
 const slugify = require('../utils/slugify')
+const { allowedCategoryNames } = require('../utils/allowedCategories')
+
+const isAllowedCategoryName = (name) => allowedCategoryNames.includes(String(name || '').trim())
 
 const createCategory = asyncHandler(async (req, res) => {
   const { name, description, image, isActive } = req.body
 
-  if (!name) {
-    throw new AppError('Category name is required.', 400)
+  if (!isAllowedCategoryName(name)) {
+    throw new AppError(`Category must be one of: ${allowedCategoryNames.join(', ')}.`, 400)
   }
 
   const category = await Category.create({
@@ -26,7 +29,10 @@ const createCategory = asyncHandler(async (req, res) => {
 
 const getAllCategories = asyncHandler(async (req, res) => {
   const includeInactive = req.user?.role === 'admin' && req.query.includeInactive === 'true'
-  const filter = includeInactive ? {} : { isActive: true }
+  const filter = {
+    name: { $in: allowedCategoryNames },
+    ...(includeInactive ? {} : { isActive: true }),
+  }
 
   const categories = await Category.find(filter).sort({ createdAt: -1 }).lean()
 
@@ -40,7 +46,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
 const getCategoryById = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id)
 
-  if (!category || (!category.isActive && req.user?.role !== 'admin')) {
+  if (!category || !isAllowedCategoryName(category.name) || (!category.isActive && req.user?.role !== 'admin')) {
     throw new AppError('Category not found.', 404)
   }
 
@@ -61,6 +67,9 @@ const updateCategory = asyncHandler(async (req, res) => {
   })
 
   if (updates.name) {
+    if (!isAllowedCategoryName(updates.name)) {
+      throw new AppError(`Category must be one of: ${allowedCategoryNames.join(', ')}.`, 400)
+    }
     updates.slug = slugify(updates.name)
   }
 
@@ -81,7 +90,10 @@ const updateCategory = asyncHandler(async (req, res) => {
 })
 
 const deleteCategory = asyncHandler(async (req, res) => {
-  const category = await Category.findByIdAndDelete(req.params.id)
+  const category = await Category.findOneAndDelete({
+    _id: req.params.id,
+    name: { $in: allowedCategoryNames },
+  })
 
   if (!category) {
     throw new AppError('Category not found.', 404)

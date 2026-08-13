@@ -26,18 +26,18 @@ export const images = {
 }
 
 export const categories = [
-  { id: 'baby-care', title: 'Baby Care', icon: Baby },
-  { id: 'skin-care', title: 'Skin Care', icon: Leaf },
-  { id: 'diapering', title: 'Diapering', icon: PackageCheck },
-  { id: 'feeding', title: 'Feeding', icon: Baby },
-  { id: 'health', title: 'Health & Safety', icon: ShieldCheck },
+  { id: 'baby-shampoo', title: 'Baby Shampoo', icon: Baby },
+  { id: 'baby-body-wash', title: 'Baby Body Wash', icon: PackageCheck },
+  { id: 'baby-lotion', title: 'Baby Lotion', icon: Leaf },
+  { id: 'baby-diaper-rash-cream', title: 'Baby Diaper Rash Cream', icon: ShieldCheck },
+  { id: 'baby-massage-oil', title: 'Baby Massage Oil', icon: Heart },
 ]
 
 export const products = [
   {
     id: 'babycure-gentle-baby-wash',
     name: 'Babycure Gentle Baby Wash',
-    category: 'baby-care',
+    category: 'baby-body-wash',
     price: 399,
     oldPrice: 549,
     rating: 4.8,
@@ -52,7 +52,7 @@ export const products = [
   {
     id: 'babycure-natural-moisturizing-lotion',
     name: 'Babycure Natural Moisturizing Lotion',
-    category: 'skin-care',
+    category: 'baby-lotion',
     price: 499,
     oldPrice: 649,
     rating: 4.7,
@@ -66,7 +66,7 @@ export const products = [
   {
     id: 'babycure-diaper-rash-cream',
     name: 'Babycure Diaper Rash Cream',
-    category: 'diapering',
+    category: 'baby-diaper-rash-cream',
     price: 299,
     oldPrice: 399,
     rating: 4.6,
@@ -80,7 +80,7 @@ export const products = [
   {
     id: 'babycure-premium-baby-wipes',
     name: 'Babycure Premium Baby Wipes (72 Pcs)',
-    category: 'diapering',
+    category: 'baby-diaper-rash-cream',
     price: 199,
     oldPrice: 249,
     rating: 4.5,
@@ -94,7 +94,7 @@ export const products = [
   {
     id: 'babycure-nourishing-baby-oil',
     name: 'Babycure Nourishing Baby Oil',
-    category: 'baby-care',
+    category: 'baby-massage-oil',
     price: 299,
     oldPrice: 399,
     rating: 4.4,
@@ -108,7 +108,7 @@ export const products = [
   {
     id: 'babycure-baby-powder',
     name: 'Babycure Baby Powder',
-    category: 'baby-care',
+    category: 'baby-lotion',
     price: 199,
     oldPrice: 259,
     rating: 4.3,

@@ -1,4 +1,4 @@
-import { BadgeCheck, Heart, Minus, Plus, Star } from 'lucide-react'
+import { BadgeCheck, ChevronDown, Heart, Minus, Plus, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -14,6 +14,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
 import { getProductImage } from '../utils/products'
+import { resolveMediaUrl } from '../api/client'
 
 export default function ProductDetailsPage() {
   const { id } = useParams()
@@ -27,6 +28,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
   const [activeImage, setActiveImage] = useState('')
+  const [activeDetail, setActiveDetail] = useState('')
 
   useEffect(() => {
     let active = true
@@ -52,7 +54,7 @@ export default function ProductDetailsPage() {
     }, 50)
   }, [loading, location.hash])
 
-  const images = useMemo(() => product?.images || [], [product])
+  const images = useMemo(() => (product?.images || []).map((image) => ({ ...image, url: resolveMediaUrl(image.url) })), [product])
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
@@ -99,7 +101,7 @@ export default function ProductDetailsPage() {
             )}
           </div>
           <div className="grid min-h-[520px] place-items-center rounded-md bg-gradient-to-br from-blue-50 via-white to-green-50">
-            {activeImage ? <img src={activeImage} alt={product.name} className="max-h-[500px] w-full object-contain p-8" /> : <ProductArt large />}
+            {activeImage ? <img src={activeImage} alt={product.name} className="max-h-[500px] w-full object-contain p-8" loading="eager" fetchPriority="high" decoding="async" /> : <ProductArt large />}
           </div>
         </div>
         <div className="py-4">
@@ -110,12 +112,8 @@ export default function ProductDetailsPage() {
             <p className="text-4xl font-black text-slate-950">{formatPrice(product.price)}</p>
             {product.mrp > product.price && <p className="pb-1 font-bold text-slate-400 line-through">{formatPrice(product.mrp)}</p>}
           </div>
-          <p className="mt-5 max-w-xl text-base font-medium leading-8 text-slate-600">{product.description}</p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {['Natural ingredients', 'Dermatologically tested', 'No harsh chemicals', 'Made for newborn care'].map((item) => (
-              <p key={item} className="flex items-center gap-2 font-bold text-slate-700"><BadgeCheck className="h-5 w-5 text-brand-green" /> {item}</p>
-            ))}
-          </div>
+          <p className="mt-5 max-w-xl text-base font-medium leading-8 text-slate-600">{product.shortDescription || 'Gentle everyday care made for your baby.'}</p>
+          <ProductDetailsTabs product={product} activeDetail={activeDetail} setActiveDetail={setActiveDetail} />
           <div className="mt-7">
             <p className="mb-2 text-sm font-black text-slate-900">Quantity</p>
             <div className="inline-flex rounded-md border border-slate-200 bg-white">
@@ -123,7 +121,7 @@ export default function ProductDetailsPage() {
               <span className="px-5 py-3 font-black">{quantity}</span>
               <button className="p-3" type="button" onClick={() => setQuantity((value) => Math.min(product.stock || 1, value + 1))}><Plus className="h-4 w-4" /></button>
             </div>
-            <p className={`mt-2 text-sm font-bold ${product.stock > 5 ? 'text-brand-green' : 'text-red-500'}`}>{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</p>
+            <p className={`mt-2 text-sm font-bold ${product.stock > 0 ? 'text-brand-green' : 'text-red-500'}`}>{product.stock > 0 ? 'In stock' : 'Out of stock'}</p>
           </div>
           <div className="mt-7 flex flex-wrap gap-4">
             <Button onClick={handleAdd} disabled={!product.stock}>Add to Bag</Button>
@@ -150,6 +148,58 @@ export default function ProductDetailsPage() {
       <Reviews product={product} reviews={reviews} setReviews={setReviews} canReview={isAuthenticated} />
     </section>
   )
+}
+
+function ProductDetailsTabs({ product, activeDetail, setActiveDetail }) {
+  const sections = [
+    ['description', 'Description', product.description],
+    ['keyFeatures', 'Key Features', product.keyFeatures],
+    ['specifications', 'Specifications', product.specifications],
+    ['benefits', 'Benefits', product.benefits],
+    ['howToUse', 'How To Use', product.howToUse],
+  ]
+  // Always show the five buttons; show placeholder when content missing
+  const hasAny = sections.some(([, , content]) => !!content)
+  if (!hasAny) {
+    // still render buttons but with placeholders
+  }
+  const selected = sections.find(([key]) => key === activeDetail)
+  return (
+    <div className="mt-5 max-w-xl border-t border-slate-200 pt-4">
+      <div className="flex flex-wrap gap-2">
+        {sections.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveDetail(activeDetail === key ? '' : key)}
+            className={`rounded-lg px-3 py-2 text-sm font-extrabold transition ${activeDetail === key ? 'bg-brand-ink text-white' : 'bg-sky-50 text-brand-ink hover:bg-brand-mist'}`}
+          >
+            {label}
+            <ChevronDown className={`ml-1 inline h-4 w-4 transition-transform ${activeDetail === key ? 'rotate-180' : ''}`} />
+          </button>
+        ))}
+      </div>
+      {selected && (
+        <div className="product-rich-text break-words px-1 pt-4 text-base font-medium leading-8 text-slate-600">
+          {selected[2] ? (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(selected[2]) }} />
+          ) : (
+            <p className="text-sm font-medium text-slate-500">Information not provided for this product.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function sanitizeProductHtml(value) {
+  if (typeof window === 'undefined') return String(value || '')
+  const documentNode = new DOMParser().parseFromString(String(value || ''), 'text/html')
+  documentNode.querySelectorAll('script, style, iframe, object, embed').forEach((element) => element.remove())
+  documentNode.querySelectorAll('*').forEach((element) => [...element.attributes].forEach((attribute) => {
+    if (attribute.name.startsWith('on') || attribute.name === 'style' || (attribute.name === 'href' && !/^https?:|^mailto:/i.test(attribute.value))) element.removeAttribute(attribute.name)
+  }))
+  return documentNode.body.innerHTML
 }
 
 function Reviews({ product, reviews, setReviews, canReview }) {

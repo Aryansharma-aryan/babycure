@@ -2,7 +2,7 @@ const multer = require('multer')
 const fs = require('fs')
 const path = require('path')
 const { CloudinaryStorage } = require('multer-storage-cloudinary')
-const { assertCloudinaryConfig, cloudinary } = require('../config/cloudinary')
+const { cloudinary } = require('../config/cloudinary')
 const AppError = require('../utils/AppError')
 
 const allowedFormats = ['jpg', 'jpeg', 'png', 'webp']
@@ -29,7 +29,7 @@ const upload = multer({
   storage: createStorage('babycure/products'),
   fileFilter,
   limits: {
-    files: 5,
+    files: 4,
     fileSize: 3 * 1024 * 1024,
   },
 })
@@ -44,19 +44,21 @@ const returnUpload = multer({
 })
 
 const returnUploadsDir = path.join(__dirname, '..', '..', 'uploads', 'return-requests')
+const productUploadsDir = path.join(__dirname, '..', '..', 'uploads', 'products')
+
+const createLocalStorage = (destination) => multer.diskStorage({
+  destination(req, file, callback) {
+    fs.mkdirSync(destination, { recursive: true })
+    callback(null, destination)
+  },
+  filename(req, file, callback) {
+    const ext = path.extname(file.originalname || '').toLowerCase()
+    callback(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
+  },
+})
 
 const localReturnUpload = multer({
-  storage: multer.diskStorage({
-    destination(req, file, callback) {
-      fs.mkdirSync(returnUploadsDir, { recursive: true })
-      callback(null, returnUploadsDir)
-    },
-    filename(req, file, callback) {
-      const ext = path.extname(file.originalname || '').toLowerCase()
-      const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`
-      callback(null, safeName)
-    },
-  }),
+  storage: createLocalStorage(returnUploadsDir),
   fileFilter,
   limits: {
     files: 5,
@@ -64,29 +66,38 @@ const localReturnUpload = multer({
   },
 })
 
-const ensureCloudinaryReady = (req, res, next) => {
-  const contentType = req.headers['content-type'] || ''
-  if (!contentType.includes('multipart/form-data')) {
-    return next()
-  }
-
-  try {
-    assertCloudinaryConfig()
-    next()
-  } catch (error) {
-    next(new AppError(error.message, 500))
-  }
-}
+const localProductUpload = multer({
+  storage: createLocalStorage(productUploadsDir),
+  fileFilter,
+  limits: {
+    files: 4,
+    fileSize: 3 * 1024 * 1024,
+  },
+})
 
 const hasCloudinaryConfig = () =>
   Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
 
 const uploadReturnImages = (req, res, next) => {
   const uploader = hasCloudinaryConfig() ? returnUpload : localReturnUpload
-  return uploader.array('images', 5)(req, res, next)
+  return uploader.any()(req, res, next)
 }
 
-const uploadProductImages = [ensureCloudinaryReady, upload.array('images', 5)]
+// Allowed product upload field names: support explicit slots and legacy multi-file `images`
+const productFileFields = [
+  { name: 'imageFile0', maxCount: 1 },
+  { name: 'imageFile1', maxCount: 1 },
+  { name: 'imageFile2', maxCount: 1 },
+  { name: 'imageFile3', maxCount: 1 },
+  { name: 'images', maxCount: 4 },
+]
+
+const uploadProductImages = (req, res, next) => {
+  const uploader = hasCloudinaryConfig() ? upload : localProductUpload
+  // Parse the request exactly once. Retrying multer after it has read a multipart
+  // stream causes "Unexpected end of form", which made product creation fail.
+  return uploader.fields(productFileFields)(req, res, next)
+}
 
 module.exports = {
   uploadProductImages,
