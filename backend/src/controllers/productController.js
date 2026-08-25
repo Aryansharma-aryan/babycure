@@ -14,6 +14,7 @@ const productFields = [
   'specifications',
   'benefits',
   'howToUse',
+  'comboItems',
   'price',
   'mrp',
   'category',
@@ -35,9 +36,9 @@ const toBoolean = (value) => {
 }
 
 const normalizeImages = (files = [], body = {}) => {
-  // Support up to 4 explicit slots named imageFile0..3 or imageUrl0..3 (preserves order)
+  // Explicit numbered slots preserve the admin's gallery order. Slot 0 is primary.
   const slots = []
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < 20; i += 1) {
     // look for a file uploaded in field `imageFile{i}`
     const file = files.find((f) => f.fieldname === `imageFile${i}`)
     if (file) {
@@ -52,11 +53,11 @@ const normalizeImages = (files = [], body = {}) => {
     }
   }
 
-  if (slots.length > 0) return slots.slice(0, 4)
+  if (slots.length > 0) return slots.slice(0, 20)
 
   // If explicit slots not provided but files exist (e.g., multi-file input named `images`), use arrival order
   if (files && files.length > 0) {
-    return files.slice(0, 4).map((f) => ({ url: f.path || f.filename || f.location, publicId: f.filename || f.publicId || null }))
+    return files.slice(0, 20).map((f) => ({ url: f.path || f.filename || f.location, publicId: f.filename || f.publicId || null }))
   }
 
   // Fallback: support legacy `images` field (string or array)
@@ -73,7 +74,7 @@ const normalizeImages = (files = [], body = {}) => {
       return image
     })
     .filter((image) => image?.url)
-    .slice(0, 4)
+    .slice(0, 20)
 }
 
 const buildProductPayload = (body, files = []) => {
@@ -96,6 +97,15 @@ const buildProductPayload = (body, files = []) => {
       payload[field] = toBoolean(payload[field])
     }
   })
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'comboItems')) {
+    try {
+      const items = Array.isArray(payload.comboItems) ? payload.comboItems : JSON.parse(payload.comboItems || '[]')
+      payload.comboItems = items.map((item) => String(item).trim()).filter(Boolean)
+    } catch {
+      throw new AppError('Combo items must be a valid list.', 400)
+    }
+  }
 
   if (payload.name) {
     payload.slug = slugify(payload.name)
@@ -251,7 +261,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     try {
       const existingImages = JSON.parse(req.body.imageOrder)
       const newImages = payload.images || []
-      payload.images = [...existingImages, ...newImages].slice(0, 4)
+      payload.images = [...existingImages, ...newImages].slice(0, 20)
     } catch {
       throw new AppError('Invalid image order.', 400)
     }

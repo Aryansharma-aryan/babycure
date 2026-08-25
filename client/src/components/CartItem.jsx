@@ -1,4 +1,5 @@
 import { Minus, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
@@ -7,8 +8,18 @@ import ProductArt from './ProductArt'
 
 export default function CartItem({ item }) {
   const { removeFromCart, updateQuantity } = useCart()
-  const handleUpdate = (quantity) => {
-    updateQuantity(item.id, quantity).catch((error) => toast.error(error.message))
+  const [updating, setUpdating] = useState(false)
+
+  const handleUpdate = async (quantity) => {
+    if (updating) return
+    setUpdating(true)
+    try {
+      await updateQuantity(item.id, quantity)
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const handleRemove = () => {
@@ -25,11 +36,11 @@ export default function CartItem({ item }) {
         <p className="mt-1 font-black text-slate-900">{formatPrice(item.price)}</p>
       </div>
       <div className="inline-flex w-max rounded-md border border-slate-200 bg-white">
-        <button className="rounded-l-md p-2 transition hover:bg-sky-50 hover:text-brand-blue" type="button" onClick={() => handleUpdate(item.quantity - 1)}>
+        <button className="rounded-l-md p-2 transition hover:bg-sky-50 hover:text-brand-blue disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={updating} onClick={() => handleUpdate(item.quantity - 1)}>
           <Minus className="h-4 w-4" />
         </button>
         <span className="px-4 py-2 font-black">{item.quantity}</span>
-        <button className="rounded-r-md p-2 transition hover:bg-sky-50 hover:text-brand-blue" type="button" onClick={() => handleUpdate(item.quantity + 1)}>
+        <button className="rounded-r-md p-2 transition hover:bg-sky-50 hover:text-brand-blue disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={updating} onClick={() => handleUpdate(item.quantity + 1)}>
           <Plus className="h-4 w-4" />
         </button>
       </div>

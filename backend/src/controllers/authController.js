@@ -5,7 +5,7 @@ const Otp = require('../models/Otp')
 const User = require('../models/User')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
-const { getCookieOptions, signToken } = require('../utils/jwt')
+const { AUTH_COOKIE_NAME, getCookieOptions, signToken } = require('../utils/jwt')
 const { isValidPhone, normalizePhone } = require('../utils/phone')
 const { notifyUser } = require('../services/notificationService')
 const { getLogoAttachment, getLogoHtml, sendEmail } = require('../services/emailService')
@@ -13,7 +13,7 @@ const { getLogoAttachment, getLogoHtml, sendEmail } = require('../services/email
 const sendAuthResponse = (user, statusCode, res, message) => {
   const token = signToken(user._id)
 
-  res.cookie('token', token, getCookieOptions())
+  res.cookie(AUTH_COOKIE_NAME, token, getCookieOptions())
 
   res.status(statusCode).json({
     success: true,
@@ -93,7 +93,7 @@ const loginUser = asyncHandler(async (req, res) => {
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
-  res.cookie('token', '', {
+  res.cookie(AUTH_COOKIE_NAME, '', {
     ...getCookieOptions(),
     maxAge: 0,
   })

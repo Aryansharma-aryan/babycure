@@ -14,8 +14,9 @@ export function getProductImage(product) {
 export function normalizeCartItems(cart) {
   return (cart?.items || []).map((item) => {
     const product = item.product || {}
+    const id = getProductId(product) || (typeof item.product === 'string' ? item.product : '')
     return {
-      id: product._id || item.product,
+      id,
       name: item.productName || product.name,
       price: item.priceAtTime || product.price || 0,
       oldPrice: product.mrp || item.priceAtTime || 0,
@@ -28,5 +29,5 @@ export function normalizeCartItems(cart) {
       raw: item,
       product,
     }
-  })
+  }).filter((item) => item.id)
 }

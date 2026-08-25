@@ -9,7 +9,7 @@ import newBanner from '../assets/newBanner.jfif'
 import familyImage from '../assets/hero.png'
 
 const bannerImage = newBanner
-const allowedCategoryNames = new Set(['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil'])
+const allowedCategoryNames = new Set(['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil', 'Combos'])
 
 export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all')

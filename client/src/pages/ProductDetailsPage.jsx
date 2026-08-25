@@ -153,6 +153,7 @@ export default function ProductDetailsPage() {
 function ProductDetailsTabs({ product, activeDetail, setActiveDetail }) {
   const sections = [
     ['description', 'Description', product.description],
+    ['comboItems', 'Combo Includes', product.comboItems?.length ? `<ul>${product.comboItems.map((item) => `<li>${escapeProductText(item)}</li>`).join('')}</ul>` : ''],
     ['keyFeatures', 'Key Features', product.keyFeatures],
     ['specifications', 'Specifications', product.specifications],
     ['benefits', 'Benefits', product.benefits],
@@ -190,6 +191,10 @@ function ProductDetailsTabs({ product, activeDetail, setActiveDetail }) {
       )}
     </div>
   )
+}
+
+function escapeProductText(value) {
+  return String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character])
 }
 
 function sanitizeProductHtml(value) {

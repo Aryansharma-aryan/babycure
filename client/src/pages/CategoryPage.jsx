@@ -20,6 +20,7 @@ const allowedCategoryNames = new Set([
   'Baby Lotion',
   'Baby Diaper Rash Cream',
   'Baby Massage Oil',
+  'Combos',
 ])
 
 export default function CategoryPage() {

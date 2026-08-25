@@ -1,7 +1,7 @@
 import { ArrowRight, Baby, Check, CircleHelp, CreditCard, Droplets, Headphones, Heart, Info, Mail, MapPin, PackageCheck, RotateCcw, Search, ShieldCheck, ShoppingBag, Sparkles, Truck } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import careImage from '../assets/about-products-promise.png'
-import familyImage from '../assets/about-mother-baby-care.png'
+import careImage from '../assets/care2.png'
+import familyImage from '../assets/care1.png'
 
 const reasons = [
   [Baby, 'Made around real routines', 'The collection is organized around bath time, skin care, diaper changes and the everyday moments parents already know.'],

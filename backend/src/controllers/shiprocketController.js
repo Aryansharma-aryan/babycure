@@ -1,12 +1,16 @@
 const Order = require('../models/Order')
 const ReturnRequest = require('../models/ReturnRequest')
+const logger = require('../config/logger')
 const {
   assignAWB,
   createShiprocketOrder,
   generateLabel,
   getCheapestCourier,
+  getCourierEstimatedDeliveryDate,
   getOrderWeight,
   getServiceability,
+  getShiprocketOrder,
+  getShiprocketOrderEstimatedDeliveryDate,
   schedulePickup,
   trackShipmentByAWB,
 } = require('../services/shiprocket.service')
@@ -17,6 +21,10 @@ const asyncHandler = require('../utils/asyncHandler')
 
 const shiprocketStatusMap = {
   shipped: 'shipped',
+  'pickup scheduled': 'pickup_scheduled',
+  'pickup requested': 'pickup_scheduled',
+  'picked up': 'picked_up',
+  'pickup done': 'picked_up',
   'in transit': 'in_transit',
   'out for delivery': 'out_for_delivery',
   delivered: 'delivered',
@@ -24,6 +32,18 @@ const shiprocketStatusMap = {
   rto: 'returned',
   cancelled: 'failed',
   failed: 'failed',
+}
+
+const deliveryStatusRank = {
+  placed: 0,
+  processing: 1,
+  packed: 2,
+  pickup_scheduled: 3,
+  picked_up: 4,
+  shipped: 5,
+  in_transit: 6,
+  out_for_delivery: 7,
+  delivered: 8,
 }
 
 const populateOrder = (query) =>
@@ -41,7 +61,44 @@ const getShiprocketData = (response) => {
 
 const normalizeDeliveryStatus = (status = '') => {
   const value = String(status).trim().toLowerCase().replace(/_/g, ' ')
+  if (/picked|pickup complete|shipment pickup complete/.test(value)) return 'picked_up'
+  if (/pickup (scheduled|requested|booked|queued|generated)|out for pickup/.test(value)) return 'pickup_scheduled'
+  if (/out for delivery/.test(value)) return 'out_for_delivery'
+  if (/in[ -]?transit|reached.*hub/.test(value)) return 'in_transit'
   return shiprocketStatusMap[value] || value.replace(/\s+/g, '_') || 'processing'
+}
+
+const normalizeWebhookStatus = (body = {}) => {
+  const label = extractFirst(body.current_status, body.shipment_status, body.status)
+  if (label) return normalizeDeliveryStatus(label)
+
+  const currentId = Number(body.current_status_id)
+  const shipmentId = Number(body.shipment_status_id)
+  if (currentId === 51 || shipmentId === 42) return 'picked_up'
+  if ([4, 12, 34].includes(currentId) || [3, 4, 19, 27].includes(shipmentId)) return 'pickup_scheduled'
+  if (currentId === 20 || shipmentId === 18) return 'in_transit'
+  if (currentId === 19 || shipmentId === 17) return 'out_for_delivery'
+  if (currentId === 7 || shipmentId === 7) return 'delivered'
+  if (currentId === 6 || shipmentId === 6) return 'shipped'
+  return 'processing'
+}
+
+const advanceDeliveryStatus = (currentStatus, nextStatus) => {
+  if (['returned', 'failed'].includes(nextStatus)) return nextStatus
+  const currentRank = deliveryStatusRank[currentStatus] ?? -1
+  const nextRank = deliveryStatusRank[nextStatus] ?? -1
+  return nextRank >= currentRank ? nextStatus : currentStatus
+}
+
+const parseShiprocketTimestamp = (value) => {
+  if (!value) return new Date()
+  const match = String(value).match(/^(\d{2})[\s-](\d{2})[\s-](\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/)
+  if (match) {
+    const [, day, month, year, hours, minutes, seconds] = match
+    return new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}+05:30`)
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed
 }
 
 const syncOrderStatus = (order) => {
@@ -57,19 +114,19 @@ const syncOrderStatus = (order) => {
     return
   }
 
-  if (['shipped', 'in_transit'].includes(order.deliveryStatus)) {
+  if (['picked_up', 'shipped', 'in_transit'].includes(order.deliveryStatus)) {
     order.orderStatus = 'shipped'
     return
   }
 
-  if (['processing', 'packed'].includes(order.deliveryStatus)) {
+  if (['processing', 'packed', 'pickup_scheduled'].includes(order.deliveryStatus)) {
     order.orderStatus = 'processing'
   }
 }
 
 const pushTrackingHistory = (order, update = {}) => {
   const status = normalizeDeliveryStatus(update.status || update.current_status || update.shipment_status)
-  const supported = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
+  const supported = ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
   const safeStatus = supported.includes(status) ? status : 'processing'
   const updatedAt = update.updatedAt || update.updated_at || update.date || update.activity_date || new Date()
   const last = order.trackingHistory[order.trackingHistory.length - 1]
@@ -173,10 +230,11 @@ const scheduleOrderPickupForOrder = async (order) => {
   order.pickupStatus = extractFirst(response.pickup_status, response.status, response.message, 'Requested')
   order.shipmentStatus = extractFirst(response.shipment_status, response.status, order.shipmentStatus)
   pushTrackingHistory(order, {
-    status: order.deliveryStatus === 'placed' ? 'processing' : order.deliveryStatus,
+    status: 'pickup_scheduled',
     message: 'Pickup requested with Shiprocket.',
     location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Pickup location',
   })
+  order.deliveryStatus = 'pickup_scheduled'
   syncOrderStatus(order)
   return response
 }
@@ -227,9 +285,9 @@ const createShipment = asyncHandler(async (req, res) => {
   }
 
   order.shipmentStatus = extractFirst(data.status, response.status, 'Created')
-  order.deliveryStatus = 'processing'
+  if (!['packed', 'pickup_scheduled'].includes(order.deliveryStatus)) order.deliveryStatus = 'processing'
   pushTrackingHistory(order, {
-    status: 'processing',
+    status: order.deliveryStatus,
     message: 'Shipment created in Shiprocket.',
     location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Pickup location',
   })
@@ -250,16 +308,25 @@ const createShipment = asyncHandler(async (req, res) => {
       })
       : null
     autoCourier = getCheapestCourier(serviceability)
+    order.estimatedDeliveryDate = getCourierEstimatedDeliveryDate(autoCourier) || order.estimatedDeliveryDate
     await assignOrderAwb(order, autoCourier?.courier_company_id)
     autoPickup = await scheduleOrderPickupForOrder(order)
   }
 
   await order.save()
+  const populatedOrder = await populateOrder(Order.findById(order._id))
+
+  notifyOrderEvent({
+    user: populatedOrder.user,
+    order: populatedOrder,
+    type: 'order_tracking_update',
+    metadata: { trackingId: order.awbCode || order.trackingId, source: 'shiprocket_shipment_created' },
+  }).catch(() => {})
 
   res.status(201).json({
     success: true,
     message: autoPickup ? `Shipment created, ${autoCourier?.courier_name || 'lowest-cost courier'} assigned and pickup requested.` : 'Shiprocket shipment created successfully.',
-    order: await populateOrder(Order.findById(order._id)),
+    order: populatedOrder,
     shiprocket: response,
   })
 })
@@ -313,6 +380,7 @@ const scheduleOrderPickup = asyncHandler(async (req, res) => {
 })
 
 const syncTrackingFromShiprocket = (order, response) => {
+  const previousDeliveryStatus = order.deliveryStatus
   const data = response.tracking_data || response.data || response.response?.data || response
   const shipment = data.shipment_track?.[0] || data.shipment_track || data
   const activities = data.shipment_track_activities || data.activities || data.scans || []
@@ -344,6 +412,17 @@ const syncTrackingFromShiprocket = (order, response) => {
     order.deliveryStatus = status
   })
 
+  // Courier activity arrays are not consistently ordered. The explicit
+  // current status is authoritative and prevents the UI moving backwards.
+  if (currentStatus) {
+    const normalizedCurrent = normalizeDeliveryStatus(currentStatus)
+    order.deliveryStatus = ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'].includes(normalizedCurrent)
+      ? normalizedCurrent
+      : order.deliveryStatus
+  }
+
+  order.deliveryStatus = advanceDeliveryStatus(previousDeliveryStatus, order.deliveryStatus)
+
   syncOrderStatus(order)
 }
 
@@ -356,6 +435,15 @@ const trackOrder = asyncHandler(async (req, res) => {
 
   const response = await trackShipmentByAWB(order.awbCode)
   syncTrackingFromShiprocket(order, response)
+  if (order.shiprocketOrderId) {
+    try {
+      const shiprocketOrder = await getShiprocketOrder(order.shiprocketOrderId)
+      order.estimatedDeliveryDate = getShiprocketOrderEstimatedDeliveryDate(shiprocketOrder) || order.estimatedDeliveryDate
+      order.estimatedDeliverySyncedAt = new Date()
+    } catch (error) {
+      // Tracking status is more important than an optional EDD refresh.
+    }
+  }
   await order.save()
   const populatedOrder = await populateOrder(Order.findById(order._id))
 
@@ -377,7 +465,8 @@ const trackOrder = asyncHandler(async (req, res) => {
 
 const shiprocketWebhook = asyncHandler(async (req, res) => {
   const token = process.env.SHIPROCKET_WEBHOOK_TOKEN
-  if (token && req.get('x-shiprocket-webhook-token') !== token) {
+  const suppliedToken = req.get('x-api-key') || req.get('x-shiprocket-webhook-token')
+  if (token && suppliedToken !== token) {
     throw new AppError('Invalid Shiprocket webhook token.', 401)
   }
 
@@ -443,34 +532,38 @@ const shiprocketWebhook = asyncHandler(async (req, res) => {
     })
   }
 
+  const previousDeliveryStatus = order.deliveryStatus
   order.awbCode = String(awbCode || order.awbCode || '')
   order.trackingId = order.awbCode || order.trackingId
   order.courierName = extractFirst(body.courier_name, body.courier, order.courierName)
   order.trackingUrl = extractFirst(body.tracking_url, body.track_url, order.trackingUrl)
   order.shipmentStatus = extractFirst(body.current_status, body.shipment_status, body.status, order.shipmentStatus)
   order.estimatedDeliveryDate = extractFirst(body.edd, body.etd, body.expected_delivery_date, order.estimatedDeliveryDate)
-  order.deliveryStatus = pushTrackingHistory(order, {
-    status: body.current_status || body.shipment_status || body.status,
+  const webhookDeliveryStatus = pushTrackingHistory(order, {
+    status: normalizeWebhookStatus(body),
     message: body.message || body.activity || body.current_status || body.status,
     location: body.location || body.current_location,
-    updatedAt: body.updated_at || body.status_date || new Date(),
+    updatedAt: parseShiprocketTimestamp(body.current_timestamp || body.updated_at || body.status_date),
   })
+  order.deliveryStatus = advanceDeliveryStatus(order.deliveryStatus, webhookDeliveryStatus)
   syncOrderStatus(order)
   await order.save()
 
   const populatedOrder = await populateOrder(Order.findById(order._id))
   const notificationType = order.deliveryStatus === 'delivered'
     ? 'order_delivered'
-    : ['shipped', 'in_transit'].includes(order.deliveryStatus)
-      ? 'order_shipped'
-      : 'order_tracking_update'
+    : 'order_tracking_update'
 
-  notifyOrderEvent({
-    user: populatedOrder.user,
-    order: populatedOrder,
-    type: notificationType,
-    metadata: { trackingId: order.awbCode || order.trackingId, source: 'shiprocket_webhook' },
-  }).catch(() => {})
+  if (order.deliveryStatus !== previousDeliveryStatus) {
+    notifyOrderEvent({
+      user: populatedOrder.user,
+      order: populatedOrder,
+      type: notificationType,
+      metadata: { trackingId: order.awbCode || order.trackingId, source: 'shiprocket_webhook' },
+    }).catch((error) => {
+      logger.error({ error: error.message, orderId: order._id }, 'Unable to send Shiprocket tracking email')
+    })
+  }
 
   res.status(200).json({
     success: true,
@@ -485,4 +578,5 @@ module.exports = {
   scheduleOrderPickup,
   shiprocketWebhook,
   trackOrder,
+  syncTrackingFromShiprocket,
 }

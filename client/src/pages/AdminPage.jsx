@@ -50,10 +50,10 @@ const tabs = [
 ]
 
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
-const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
+const deliveryStatuses = ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
-const allowedCategoryNamesArray = ['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil']
+const allowedCategoryNamesArray = ['Baby Shampoo', 'Baby Body Wash', 'Baby Lotion', 'Baby Diaper Rash Cream', 'Baby Massage Oil', 'Combos']
 const allowedCategoryNames = new Set(allowedCategoryNamesArray)
 
 export default function AdminPage() {
@@ -423,8 +423,9 @@ function ProductsPanel() {
   const [categories, setCategories] = useState([])
   const [editing, setEditing] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [editingImages, setEditingImages] = useState([])
+  const [editingImages, setEditingImages] = useState([{}])
   const [fieldErrors, setFieldErrors] = useState({})
+  const [comboItems, setComboItems] = useState([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -468,9 +469,9 @@ function ProductsPanel() {
     }
     // Validate images before submit
     // Count existing slot images (from editingImages) and pending file inputs
-    const slotImagesCount = (editingImages || []).filter(Boolean).length
+    const slotImagesCount = (editingImages || []).filter((image) => image?.url).length
     let pendingFilesCount = 0
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < editingImages.length; i++) {
       const file = form.elements[`imageFile${i}`]?.files?.[0]
       if (file) pendingFilesCount += 1
     }
@@ -481,21 +482,20 @@ function ProductsPanel() {
     }
     const payload = new FormData()
     ;['name', 'description', 'shortDescription', 'keyFeatures', 'specifications', 'benefits', 'howToUse', 'price', 'mrp', 'category', 'sku', 'brand'].forEach((field) => payload.append(field, data[field] || ''))
+    payload.append('comboItems', JSON.stringify(comboItems.map((item) => item.trim()).filter(Boolean)))
     // The storefront uses stock > 0 for availability. Keep that implementation
     // detail out of the admin form and use a simple availability choice instead.
     payload.append('stock', data.availability === 'in_stock' ? '1000' : '0')
     payload.append('isFeatured', Boolean(data.isFeatured))
     payload.append('isActive', data.isActive !== 'false')
-    // Append up to 4 slot-based images: each slot can be a file (imageFile{i}) or a URL (imageUrl{i})
-    for (let i = 0; i < 4; i++) {
+    // Preserve the visible order; image 1 (index 0) is always the primary storefront photo.
+    for (let i = 0; i < editingImages.length; i++) {
       const url = data[`imageUrl${i}`]
       if (url) payload.append(`imageUrl${i}`, url)
       const file = form.elements[`imageFile${i}`]?.files?.[0]
       if (file) payload.append(`imageFile${i}`, file)
     }
-    // primaryIndex indicates which slot should be the primary image (0-based)
-    if (data.primaryIndex) payload.append('primaryIndex', data.primaryIndex)
-    else payload.append('primaryIndex', '0')
+    payload.append('primaryIndex', '0')
 
     try {
       const response = editing?._id
@@ -513,7 +513,8 @@ function ProductsPanel() {
       } else {
         toast.success(editing ? 'Product updated' : 'Product created')
         setEditing(null)
-        setEditingImages([])
+        setEditingImages([{}])
+        setComboItems([])
         form.reset()
         setFieldErrors({})
         load()
@@ -548,7 +549,7 @@ function ProductsPanel() {
 
   return (
     <div className="space-y-6">
-      <Panel title={editing ? 'Edit Product' : 'Add Product'} action={editing && <Button variant="ghost" onClick={() => { setEditing(null); setEditingImages([]); setFieldErrors({}) }}>New Product</Button>}>
+      <Panel title={editing ? 'Edit Product' : 'Add Product'} action={editing && <Button variant="ghost" onClick={() => { setEditing(null); setEditingImages([{}]); setComboItems([]); setFieldErrors({}) }}>New Product</Button>}>
         <form onSubmit={saveProduct} className="grid gap-4 md:grid-cols-2">
           <Input label="Name" name="name" defaultValue={editing?.name || ''} required error={fieldErrors.name} />
           <Input label="SKU" name="sku" defaultValue={editing?.sku || ''} required error={fieldErrors.sku} />
@@ -568,7 +569,8 @@ function ProductsPanel() {
             </select>
             {fieldErrors.category && <p className="mt-1 text-xs text-red-600">{fieldErrors.category}</p>}
           </label>
-          <ImageManager editing={editing} images={editingImages} setImages={setEditingImages} fieldErrors={fieldErrors} />
+          <ImageManager images={editingImages} setImages={setEditingImages} fieldErrors={fieldErrors} />
+          <ComboItems items={comboItems} setItems={setComboItems} />
           <label className="md:col-span-2 text-sm font-black text-slate-700">Short Description
             <textarea name="shortDescription" defaultValue={editing?.shortDescription || ''} className="mt-2 w-full rounded-md border border-slate-200 p-4 text-sm font-bold outline-none focus:border-brand-blue" rows="2" />
           </label>
@@ -594,7 +596,7 @@ function ProductsPanel() {
               <Td>{product.category?.name}</Td>
               <Td>{formatPrice(product.price)}</Td>
               <Td>{product.stock > 0 ? 'In stock' : 'Out of stock'}</Td>
-              <Td><RowActions onEdit={() => { setEditing(product); setEditingImages(product.images || []); setFieldErrors({}) }} onDelete={() => removeProduct(product._id)} /></Td>
+              <Td><RowActions onEdit={() => { setEditing(product); setEditingImages(product.images?.length ? product.images : [{}]); setComboItems(product.comboItems || []); setFieldErrors({}) }} onDelete={() => removeProduct(product._id)} /></Td>
             </tr>
           ))}
         </Table>
@@ -621,25 +623,14 @@ function ImageManager({ images, setImages, fieldErrors = {} }) {
     return next
   })
 
-  const removeSlot = (index) => setImages((current) => {
-    const next = [...current]
-    next[index] = undefined
-    return next
-  })
-
-  const move = (from, to) => setImages((current) => {
-    const next = [...current]
-    const [image] = next.splice(from, 1)
-    next.splice(to, 0, image)
-    return next
-  })
+  const removeSlot = (index) => setImages((current) => current.filter((_, itemIndex) => itemIndex !== index))
 
   return (
     <div className="md:col-span-2 rounded-md border border-sky-100 bg-sky-50 p-4">
       <p className="text-sm font-black text-slate-700">Product images</p>
-      <p className="mt-1 text-xs font-semibold text-slate-500">Upload or provide a URL for each slot. Choose which image is primary.</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">Add as many photos as needed (up to 20). Photo 1 is always the primary photo shown on product cards.</p>
       <div className="mt-3 grid grid-cols-2 gap-3">
-        {[0, 1, 2, 3].map((i) => (
+        {images.map((image, i) => (
           <div key={i} className="relative rounded border border-slate-200 bg-white p-2">
             <div className="h-28 w-full overflow-hidden rounded">
               {images?.[i]?.url ? <img src={resolveMediaUrl(images[i].url)} alt={`Product ${i + 1}`} className="h-full w-full object-cover" /> : <div className="flex h-28 w-full items-center justify-center bg-slate-50 text-sm text-slate-400">Slot {i + 1}</div>}
@@ -670,7 +661,7 @@ function ImageManager({ images, setImages, fieldErrors = {} }) {
               />
               <input
                 name={`imageUrl${i}`}
-                defaultValue={images?.[i]?.url || ''}
+                value={String(image?.url || '').startsWith('blob:') ? '' : (image?.url || '')}
                 placeholder="Image URL"
                 className={`mt-1 w-full rounded-md px-3 py-2 text-sm ${fieldErrors[`imageUrl${i}`] ? 'border border-red-500' : 'border border-slate-200'}`}
                 onChange={(event) => setSlotUrl(i, event.target.value)}
@@ -679,13 +670,30 @@ function ImageManager({ images, setImages, fieldErrors = {} }) {
                 <p className="mt-1 text-xs text-red-600">{fieldErrors[`imageFile${i}`] || fieldErrors[`imageUrl${i}`]}</p>
               )}
               <div className="flex items-center justify-between">
-                <label className="text-xs">Primary <input type="radio" name="primaryIndex" value={i} defaultChecked={i === 0} className="ml-2" /></label>
-                {images?.[i]?.url && <button type="button" onClick={() => removeSlot(i)} className="text-xs text-red-600">Remove</button>}
+                <span className={`text-xs font-black ${i === 0 ? 'text-brand-green' : 'text-slate-400'}`}>{i === 0 ? 'Primary photo' : `Photo ${i + 1}`}</span>
+                {images.length > 1 && <button type="button" onClick={() => removeSlot(i)} className="text-xs text-red-600">Remove</button>}
               </div>
             </div>
           </div>
         ))}
       </div>
+      {images.length < 20 && <button type="button" onClick={() => setImages((current) => [...current, {}])} className="mt-3 rounded-md border border-brand-blue bg-white px-4 py-2 text-xs font-black text-brand-blue">+ Add another photo</button>}
+    </div>
+  )
+}
+
+function ComboItems({ items, setItems }) {
+  return (
+    <div className="md:col-span-2 rounded-md border border-green-100 bg-green-50 p-4">
+      <p className="text-sm font-black text-slate-700">Combo contents</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">Optional. Add each product or item included in this combo.</p>
+      <div className="mt-3 space-y-2">
+        {items.map((item, index) => <div key={index} className="flex gap-2">
+          <input value={item} onChange={(event) => setItems((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} placeholder={`Combo item ${index + 1}`} className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-bold outline-none focus:border-brand-blue" />
+          <button type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="px-3 text-xs font-black text-red-600">Remove</button>
+        </div>)}
+      </div>
+      <button type="button" onClick={() => setItems((current) => [...current, ''])} className="mt-3 rounded-md border border-brand-green bg-white px-4 py-2 text-xs font-black text-brand-green">+ Add combo item</button>
     </div>
   )
 }
@@ -772,6 +780,7 @@ function OrdersPanel() {
   const [selected, setSelected] = useState(null)
   const [detailsOrder, setDetailsOrder] = useState(null)
   const [shipmentBusy, setShipmentBusy] = useState('')
+  const [receiptBusy, setReceiptBusy] = useState('')
   const shipmentBusyRef = useRef(false)
 
   const load = useCallback(async () => {
@@ -794,6 +803,26 @@ function OrdersPanel() {
       load()
     } catch (error) {
       toast.error(error.message)
+    }
+  }
+
+  const downloadReceipt = async (order) => {
+    setReceiptBusy(order._id)
+    try {
+      const blob = await orderService.adminInvoice(order._id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${order.orderNumber}-receipt.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Receipt downloaded for packing')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setReceiptBusy('')
     }
   }
 
@@ -820,8 +849,15 @@ function OrdersPanel() {
         message: 'Order packed and ready for courier pickup.',
         location: 'BabyCure packing desk',
       })
-      toast.success('Order marked packed')
-      setDetailsOrder(response.order || { ...order, deliveryStatus: 'packed' })
+      let updatedOrder = response.order || { ...order, deliveryStatus: 'packed' }
+      if (!updatedOrder.shiprocketShipmentId) {
+        const shipmentResponse = await shiprocketService.createShipment(order._id)
+        updatedOrder = shipmentResponse.order || updatedOrder
+        toast.success('Packed, courier assigned and pickup requested')
+      } else {
+        toast.success('Order marked packed')
+      }
+      setDetailsOrder(updatedOrder)
       await load()
     } catch (error) {
       toast.error(error.message)
@@ -867,6 +903,8 @@ function OrdersPanel() {
           onShipment={() => { setSelected(detailsOrder); setDetailsOrder(null) }}
           onShipmentAction={runShipmentAction}
           onMarkPacked={markPacked}
+          onDownloadReceipt={downloadReceipt}
+          receiptBusy={receiptBusy === detailsOrder._id}
         />
       )}
       {selected && (
@@ -905,6 +943,7 @@ function OrdersPanel() {
               <Td>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="ghost" onClick={() => setDetailsOrder(order)} className="px-4 py-2">View All</Button>
+                  <Button variant="outline" disabled={receiptBusy === order._id} onClick={() => downloadReceipt(order)} className="px-4 py-2"><Download className="h-4 w-4" /> {receiptBusy === order._id ? 'Downloading...' : 'Receipt'}</Button>
                   <Button variant="outline" onClick={() => setSelected(order)} className="px-4 py-2"><Truck className="h-4 w-4" /> Shipment</Button>
                 </div>
               </Td>
@@ -916,7 +955,7 @@ function OrdersPanel() {
   )
 }
 
-function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction, onMarkPacked }) {
+function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction, onMarkPacked, onDownloadReceipt, receiptBusy }) {
   const address = order.shippingAddress || {}
   const user = order.user || {}
   const itemsPrice = order.itemsPrice ?? order.orderItems?.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? 0
@@ -929,6 +968,9 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction,
       title={`Order Details - ${order.orderNumber}`}
       action={
         <div className="flex flex-wrap gap-2">
+          <Button variant="green" disabled={receiptBusy} onClick={() => onDownloadReceipt(order)}>
+            <Download className="h-4 w-4" /> {receiptBusy ? 'Downloading...' : 'Download Receipt'}
+          </Button>
           <Button
             variant="outline"
             disabled={Boolean(busy) || hasShipment}
@@ -959,7 +1001,7 @@ function AdminOrderDetails({ order, busy, onClose, onShipment, onShipmentAction,
           </Button>
           <Button
             variant="outline"
-            disabled={Boolean(busy) || !hasAwb || order.deliveryStatus === 'packed'}
+            disabled={Boolean(busy) || ['packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered'].includes(order.deliveryStatus)}
             onClick={() => onMarkPacked(order)}
           >
             <PackageCheck className="h-4 w-4" /> {busy === 'packed' ? 'Saving...' : 'Mark Packed'}
@@ -1174,7 +1216,8 @@ function AdminForwardShipmentGuide() {
 }
 
 function getAdminOrderWorkflow(order) {
-  const paid = order.paymentStatus === 'paid'
+  const isCod = order.paymentMethod === 'COD'
+  const paid = order.paymentStatus === 'paid' || isCod
   const shipment = Boolean(order.shiprocketShipmentId)
   const awb = Boolean(order.awbCode || order.trackingId)
   const label = Boolean(order.labelUrl)
@@ -1184,8 +1227,8 @@ function getAdminOrderWorkflow(order) {
   const stages = [
     {
       key: 'paid',
-      title: 'Payment paid',
-      help: paid ? 'Payment is confirmed. Order can move to packing.' : 'Wait for Razorpay paid status before shipment.',
+      title: isCod ? 'COD confirmed' : 'Payment paid',
+      help: isCod ? 'Cash will be collected on delivery. Order can move to packing.' : paid ? 'Payment is confirmed. Order can move to packing.' : 'Wait for Razorpay paid status before shipment.',
       done: paid,
       value: formatStatus(order.paymentStatus),
     },

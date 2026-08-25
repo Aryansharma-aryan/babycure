@@ -10,12 +10,16 @@ const asyncHandler = require('../utils/asyncHandler')
 const { markCouponUsed, validateCoupon } = require('../utils/coupon')
 const { buildInvoicePdf } = require('../utils/invoicePdf')
 const { notifyOrderEvent } = require('../services/orderNotificationService')
-const { trackShipmentByAWB } = require('../services/shiprocket.service')
+const {
+  getShiprocketOrder,
+  getShiprocketOrderEstimatedDeliveryDate,
+  trackShipmentByAWB,
+} = require('../services/shiprocket.service')
 
 const cancellableStatuses = ['placed', 'processing']
 const cancellableDeliveryStatuses = ['placed', 'processing']
 const orderStatuses = ['placed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']
-const deliveryStatuses = ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
+const deliveryStatuses = ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed']
 const shiprocketStatusMap = {
   shipped: 'shipped',
   'in transit': 'in_transit',
@@ -27,6 +31,21 @@ const shiprocketStatusMap = {
   failed: 'failed',
   packed: 'packed',
   manifest: 'packed',
+  'pickup scheduled': 'pickup_scheduled',
+  'pickup requested': 'pickup_scheduled',
+  'picked up': 'picked_up',
+  'pickup done': 'picked_up',
+}
+const deliveryStatusRank = {
+  placed: 0,
+  processing: 1,
+  packed: 2,
+  pickup_scheduled: 3,
+  picked_up: 4,
+  shipped: 5,
+  in_transit: 6,
+  out_for_delivery: 7,
+  delivered: 8,
 }
 
 const generateOrderNumber = () => {
@@ -47,7 +66,18 @@ const extractFirst = (...values) => values.find((value) => value !== undefined &
 
 const normalizeDeliveryStatus = (status = '') => {
   const value = String(status).trim().toLowerCase().replace(/_/g, ' ')
+  if (/picked|pickup complete|shipment pickup complete/.test(value)) return 'picked_up'
+  if (/pickup (scheduled|requested|booked|queued|generated)|out for pickup/.test(value)) return 'pickup_scheduled'
+  if (/out for delivery/.test(value)) return 'out_for_delivery'
+  if (/in[ -]?transit|reached.*hub/.test(value)) return 'in_transit'
   return shiprocketStatusMap[value] || value.replace(/\s+/g, '_') || 'processing'
+}
+
+const advanceDeliveryStatus = (currentStatus, nextStatus) => {
+  if (['returned', 'failed'].includes(nextStatus)) return nextStatus
+  return (deliveryStatusRank[nextStatus] ?? -1) >= (deliveryStatusRank[currentStatus] ?? -1)
+    ? nextStatus
+    : currentStatus
 }
 
 const syncOrderStatusFromDelivery = (order) => {
@@ -63,12 +93,12 @@ const syncOrderStatusFromDelivery = (order) => {
     return
   }
 
-  if (['shipped', 'in_transit'].includes(order.deliveryStatus)) {
+  if (['picked_up', 'shipped', 'in_transit'].includes(order.deliveryStatus)) {
     order.orderStatus = 'shipped'
     return
   }
 
-  if (['processing', 'packed'].includes(order.deliveryStatus)) {
+  if (['processing', 'packed', 'pickup_scheduled'].includes(order.deliveryStatus)) {
     order.orderStatus = 'processing'
   }
 }
@@ -94,6 +124,7 @@ const pushTrackingHistory = (order, update = {}) => {
 }
 
 const syncTrackingFromShiprocketResponse = (order, response) => {
+  const previousDeliveryStatus = order.deliveryStatus
   const data = response.tracking_data || response.data || response.response?.data || response
   const shipment = data.shipment_track?.[0] || data.shipment_track || data
   const activities = data.shipment_track_activities || data.activities || data.scans || []
@@ -125,6 +156,13 @@ const syncTrackingFromShiprocketResponse = (order, response) => {
     order.deliveryStatus = status
   })
 
+  if (currentStatus) {
+    const normalizedCurrent = normalizeDeliveryStatus(currentStatus)
+    order.deliveryStatus = deliveryStatuses.includes(normalizedCurrent) ? normalizedCurrent : order.deliveryStatus
+  }
+
+  order.deliveryStatus = advanceDeliveryStatus(previousDeliveryStatus, order.deliveryStatus)
+
   syncOrderStatusFromDelivery(order)
 }
 
@@ -134,11 +172,22 @@ const autoSyncTrackingIfReady = async (order, { force = false } = {}) => {
 
   const lastSync = order.trackingSyncedAt ? new Date(order.trackingSyncedAt).getTime() : 0
   const syncAgeMs = Date.now() - lastSync
-  if (!force && syncAgeMs < 60 * 1000) return false
+  const minimumSyncInterval = Math.max(Number(process.env.TRACKING_SYNC_MIN_INTERVAL_MS || 15000), 5000)
+  if (!force && syncAgeMs < minimumSyncInterval) return false
 
   try {
     const response = await trackShipmentByAWB(awbCode)
     syncTrackingFromShiprocketResponse(order, response)
+    const estimateAge = order.estimatedDeliverySyncedAt ? Date.now() - new Date(order.estimatedDeliverySyncedAt).getTime() : Infinity
+    if (order.shiprocketOrderId && (!order.estimatedDeliveryDate || estimateAge >= 15 * 60 * 1000)) {
+      try {
+        const shiprocketOrder = await getShiprocketOrder(order.shiprocketOrderId)
+        order.estimatedDeliveryDate = getShiprocketOrderEstimatedDeliveryDate(shiprocketOrder) || order.estimatedDeliveryDate
+        order.estimatedDeliverySyncedAt = new Date()
+      } catch (estimateError) {
+        logger.warn({ error: estimateError.message, orderId: order._id }, 'Shiprocket EDD refresh failed')
+      }
+    }
     order.trackingSyncedAt = new Date()
     await order.save()
     return true
@@ -169,10 +218,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (!['COD', 'ONLINE'].includes(paymentMethod)) {
     throw new AppError('Valid payment method is required.', 400)
-  }
-
-  if (paymentMethod === 'COD') {
-    throw new AppError('COD is not available. Please use online payment.', 400)
   }
 
   if (paymentMethod === 'ONLINE') {
@@ -268,7 +313,7 @@ const createOrder = asyncHandler(async (req, res) => {
             discountAmount,
             totalPrice,
             paymentMethod,
-            paymentStatus: paymentMethod === 'COD' ? 'pending' : 'pending',
+            paymentStatus: 'pending',
             orderStatus: 'placed',
           },
         ],
@@ -276,6 +321,8 @@ const createOrder = asyncHandler(async (req, res) => {
       )
 
       if (paymentMethod === 'COD') {
+        await markCouponUsed(createdOrder, session)
+        await createdOrder.save({ session })
         cart.items = []
         cart.cartTotal = 0
         await cart.save({ session })
@@ -534,7 +581,7 @@ const updateDeliveryTracking = asyncHandler(async (req, res) => {
       if (order.paymentMethod === 'COD') {
         order.paymentStatus = 'paid'
       }
-    } else if (updates.deliveryStatus === 'shipped' || updates.deliveryStatus === 'in_transit') {
+    } else if (['picked_up', 'shipped', 'in_transit'].includes(updates.deliveryStatus)) {
       order.orderStatus = 'shipped'
     } else if (updates.deliveryStatus === 'out_for_delivery') {
       order.orderStatus = 'out_for_delivery'
@@ -544,24 +591,16 @@ const updateDeliveryTracking = asyncHandler(async (req, res) => {
   await order.save()
   const populatedOrder = await populateOrder(Order.findById(order._id))
 
-  if (updates.deliveryStatus === 'shipped' || updates.deliveryStatus === 'in_transit') {
+  if (updates.deliveryStatus) {
     await notifyOrderEvent({
       user: populatedOrder.user,
       order: populatedOrder,
-      type: 'order_shipped',
+      type: updates.deliveryStatus === 'delivered'
+        ? 'order_delivered'
+        : 'order_tracking_update',
       metadata: { trackingId: order.trackingId },
     }).catch((error) => {
-      logger.error({ error: error.message, orderId: order._id }, 'Unable to send shipping email')
-    })
-  }
-
-  if (updates.deliveryStatus === 'delivered') {
-    await notifyOrderEvent({
-      user: populatedOrder.user,
-      order: populatedOrder,
-      type: 'order_delivered',
-    }).catch((error) => {
-      logger.error({ error: error.message, orderId: order._id }, 'Unable to send delivery email')
+      logger.error({ error: error.message, orderId: order._id }, 'Unable to send tracking email')
     })
   }
 

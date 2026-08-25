@@ -8,6 +8,7 @@ const categoryDescriptions = {
   'Baby Lotion': 'Soft moisturizers for delicate baby skin.',
   'Baby Diaper Rash Cream': 'Soothing creams to protect delicate skin.',
   'Baby Massage Oil': 'Nourishing oils for calming baby massages.',
+  Combos: 'Thoughtfully paired BabyCure essentials in one convenient combo.',
 }
 
 const ensureAllowedCategories = async () => {

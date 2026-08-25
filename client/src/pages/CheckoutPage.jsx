@@ -2,7 +2,7 @@ import { CheckCircle2, CreditCard, LockKeyhole, MapPin, PackageCheck, Plus, Spar
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
-import { addressService, couponService, paymentService } from '../api/services'
+import { addressService, couponService, orderService, paymentService } from '../api/services'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import OrderSummary from '../components/OrderSummary'
@@ -16,7 +16,7 @@ const postalPattern = /^\d{6}$/
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const { items, totals, syncCart } = useCart()
   const [addresses, setAddresses] = useState([])
   const [selectedAddress, setSelectedAddress] = useState('')
@@ -26,13 +26,14 @@ export default function CheckoutPage() {
   const [pending, setPending] = useState(false)
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [successOrderId, setSuccessOrderId] = useState('')
+  const [successPaymentMethod, setSuccessPaymentMethod] = useState('')
 
   const payable = useMemo(() => coupon?.payableAmount ?? totals.total, [coupon, totals.total])
 
   useEffect(() => {
+    if (authLoading) return
     if (!isAuthenticated) {
-      toast.error('Please login to continue checkout')
-      navigate('/login')
+      navigate('/login', { state: { from: '/checkout' } })
       return
     }
     addressService
@@ -43,7 +44,7 @@ export default function CheckoutPage() {
         if (defaultAddress) setSelectedAddress(defaultAddress._id)
       })
       .catch((error) => toast.error(error.message))
-  }, [isAuthenticated, navigate])
+  }, [authLoading, isAuthenticated, navigate])
 
   const refreshAddresses = async () => {
     const response = await addressService.list()
@@ -98,12 +99,21 @@ export default function CheckoutPage() {
       order_id: payment.razorpayOrder.id,
       handler: async (response) => {
         try {
-          const verified = await paymentService.verifyRazorpayPayment(response)
+          let verified
+          try {
+            verified = await paymentService.verifyRazorpayPayment(response)
+          } catch (error) {
+            if (error.status < 500) throw error
+            // Verification is idempotent. Retry once when a transient proxy,
+            // database, or process failure interrupts the first response.
+            verified = await paymentService.verifyRazorpayPayment(response)
+          }
           await syncCart()
           const orderId = verified.order._id
           setPending(false)
+          setSuccessPaymentMethod('ONLINE')
           setSuccessOrderId(orderId)
-          toast.success('Congratulations! Order placed successfully')
+          toast.success('Payment successful! Your order is confirmed.')
           window.setTimeout(() => navigate(`/orders/${orderId}`), 2200)
         } catch (error) {
           toast.error(error.message)
@@ -134,21 +144,31 @@ export default function CheckoutPage() {
       if (paymentMethod === 'ONLINE') {
         const opened = await openRazorpay(checkoutPayload)
         if (opened) return
-      } else {
+        setPending(false)
+      } else if (paymentMethod === 'COD') {
+        const response = await orderService.create({
+          ...checkoutPayload,
+          paymentMethod: 'COD',
+        })
         await syncCart()
-        toast.error('COD is not available')
+        const orderId = response.order._id
+        setPending(false)
+        setSuccessPaymentMethod('COD')
+        setSuccessOrderId(orderId)
+        toast.success('Congratulations! Your COD order is confirmed.')
+        window.setTimeout(() => navigate(`/orders/${orderId}`), 2200)
       }
     } catch (error) {
-      toast.error(error.message)
-    } finally {
+      toast.error(error.status === 401 ? 'Your session has expired. Please login again.' : error.message)
+      if (error.status === 401) navigate('/login', { state: { from: '/checkout' } })
       setPending(false)
     }
   }
 
   return (
     <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-8">
-      {successOrderId && <OrderSuccessBlast />}
-      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select address, apply coupon, and complete secure Razorpay online payment." backTo="/cart" backLabel="Back to bag" />
+      {successOrderId && <OrderSuccessBlast paymentMethod={successPaymentMethod} />}
+      <PageHeader eyebrow="Checkout" title="Shipping and Payment" copy="Select an address, apply a coupon, and pay securely online or on delivery." backTo="/cart" backLabel="Back to bag" />
       <CheckoutSteps />
       <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -174,13 +194,13 @@ export default function CheckoutPage() {
             <h3 className="mb-5 font-display text-2xl font-black text-slate-950">Payment method</h3>
             <div className="grid gap-3 md:grid-cols-2">
               {[
-                [PackageCheck, 'COD', 'Cash on Delivery', true],
-                [CreditCard, 'ONLINE', 'Razorpay Online', false],
-              ].map(([Icon, value, label, disabled]) => (
-                <button key={value} type="button" disabled={disabled} onClick={() => setPaymentMethod(value)} className={`rounded-md border p-5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${paymentMethod === value ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}>
+                [PackageCheck, 'COD', 'Cash on Delivery'],
+                [CreditCard, 'ONLINE', 'Razorpay Online'],
+              ].map(([Icon, value, label]) => (
+                <button key={value} type="button" onClick={() => setPaymentMethod(value)} className={`rounded-md border p-5 text-left transition ${paymentMethod === value ? 'border-brand-blue bg-blue-50' : 'border-slate-200 bg-white'}`}>
                   <Icon className="mb-3 h-6 w-6 text-brand-blue" />
                   <span className="font-black text-slate-950">{label}</span>
-                  {disabled && <p className="mt-2 text-sm font-extrabold text-red-500">COD is not available</p>}
+                  <p className="mt-2 text-sm font-semibold text-slate-500">{value === 'COD' ? 'Pay when your parcel is delivered.' : 'Pay now with Razorpay.'}</p>
                 </button>
               ))}
             </div>
@@ -190,7 +210,7 @@ export default function CheckoutPage() {
             </div>
             {coupon && <p className="mt-3 text-sm font-black text-brand-green">Coupon saved {formatPrice(coupon.discountAmount)}. Payable {formatPrice(payable)}.</p>}
             <Button type="button" variant="green" className="mt-7 w-full" onClick={handlePlaceOrder} disabled={pending}>
-              <LockKeyhole className="h-5 w-5" /> {pending ? 'Placing order...' : `Place Order ${formatPrice(payable)}`}
+              <LockKeyhole className="h-5 w-5" /> {pending ? 'Placing order...' : `${paymentMethod === 'COD' ? 'Place COD Order' : 'Pay & Place Order'} ${formatPrice(payable)}`}
             </Button>
           </div>
         </div>
@@ -200,7 +220,8 @@ export default function CheckoutPage() {
   )
 }
 
-function OrderSuccessBlast() {
+function OrderSuccessBlast({ paymentMethod }) {
+  const isCod = paymentMethod === 'COD'
   const confetti = useMemo(
     () => Array.from({ length: 42 }, (_, index) => ({
       id: index,
@@ -236,13 +257,18 @@ function OrderSuccessBlast() {
         </div>
         <div className="mt-5 flex items-center justify-center gap-2 text-brand-blue">
           <Sparkles className="h-5 w-5" />
-          <span className="text-sm font-black uppercase tracking-[0.16em]">Payment done</span>
+          <span className="text-sm font-black uppercase tracking-[0.16em]">{isCod ? 'Order confirmed' : 'Payment successful'}</span>
           <Sparkles className="h-5 w-5" />
         </div>
         <h2 className="mt-3 font-display text-3xl font-black text-brand-ink sm:text-4xl">Congratulations!</h2>
         <p className="mt-3 text-base font-bold leading-7 text-slate-600">
-          Your BabyCure order has been placed successfully.
+          {isCod
+            ? 'Your BabyCure order has been placed successfully. Please pay when your parcel is delivered.'
+            : 'Your payment is complete and your BabyCure order has been placed successfully.'}
         </p>
+        <div className={`mt-5 rounded-md px-4 py-3 text-sm font-black ${isCod ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-brand-green'}`}>
+          {isCod ? 'Cash on Delivery • Payment pending until delivery' : 'Prepaid • Payment completed'}
+        </div>
       </div>
     </div>
   )

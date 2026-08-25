@@ -36,7 +36,7 @@ const trackingHistorySchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
+      enum: ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
       required: true,
     },
     message: {
@@ -190,6 +190,9 @@ const orderSchema = new mongoose.Schema(
     estimatedDeliveryDate: {
       type: Date,
     },
+    estimatedDeliverySyncedAt: {
+      type: Date,
+    },
     labelUrl: {
       type: String,
       trim: true,
@@ -204,7 +207,7 @@ const orderSchema = new mongoose.Schema(
     },
     deliveryStatus: {
       type: String,
-      enum: ['placed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
+      enum: ['placed', 'processing', 'packed', 'pickup_scheduled', 'picked_up', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'failed'],
       default: 'placed',
       index: true,
     },

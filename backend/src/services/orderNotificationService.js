@@ -25,8 +25,30 @@ const orderEventCopy = {
     message: (order) => `Order ${order.orderNumber} is on the way.`,
   },
   order_tracking_update: {
-    title: 'Order tracking updated',
-    message: (order) => `Order ${order.orderNumber} is now ${formatStatus(order.deliveryStatus || order.shipmentStatus || order.orderStatus)}.`,
+    title: (order) => {
+      const titles = {
+        packed: 'Your BabyCure order is packed',
+        pickup_scheduled: 'Courier pickup scheduled',
+        picked_up: 'Your order has been picked up',
+        shipped: 'Your order has shipped',
+        in_transit: 'Your order is in transit',
+        out_for_delivery: 'Your order is out for delivery',
+        delivered: 'Your order has been delivered',
+      }
+      return titles[order.deliveryStatus] || 'Order tracking updated'
+    },
+    message: (order) => {
+      const messages = {
+        packed: `Order ${order.orderNumber} is packed and ready for courier pickup.`,
+        pickup_scheduled: `Pickup has been scheduled for order ${order.orderNumber}.`,
+        picked_up: `Order ${order.orderNumber} has been collected by ${order.courierName || 'the courier partner'}.`,
+        shipped: `Order ${order.orderNumber} has shipped.`,
+        in_transit: `Order ${order.orderNumber} is moving through the courier network.`,
+        out_for_delivery: `Order ${order.orderNumber} is out for delivery today. Keep the registered phone available for the courier OTP.`,
+        delivered: `Order ${order.orderNumber} has been delivered successfully.`,
+      }
+      return messages[order.deliveryStatus] || `Order ${order.orderNumber} is now ${formatStatus(order.deliveryStatus || order.shipmentStatus || order.orderStatus)}.`
+    },
   },
   order_delivered: {
     title: 'Order delivered',
@@ -56,6 +78,9 @@ const buildOrderText = ({ user, order, message, metadata }) => {
     `Payment: ${order.paymentMethod || 'ONLINE'} - ${formatStatus(order.paymentStatus)}`,
     order.razorpayPaymentId ? `Razorpay Payment ID: ${order.razorpayPaymentId}` : '',
     order.razorpayOrderId ? `Razorpay Order ID: ${order.razorpayOrderId}` : '',
+    `Subtotal: ${formatPrice(order.itemsPrice)}`,
+    `Shipment charges: ${Number(order.shippingPrice || 0) > 0 ? formatPrice(order.shippingPrice) : 'FREE'}`,
+    Number(order.discountAmount || 0) > 0 ? `Discount: -${formatPrice(order.discountAmount)}` : '',
     `Total: ${formatPrice(order.totalPrice)}`,
     `Placed: ${formatDate(order.createdAt)}`,
     '',
@@ -107,6 +132,9 @@ const buildOrderHtml = ({ user, order, title, message, metadata }) => {
           ${order.razorpayPaymentId ? `<tr><td style="padding:6px 0;color:#64748B">Razorpay Payment ID</td><td style="padding:6px 0;text-align:right">${order.razorpayPaymentId}</td></tr>` : ''}
           ${order.razorpayOrderId ? `<tr><td style="padding:6px 0;color:#64748B">Razorpay Order ID</td><td style="padding:6px 0;text-align:right">${order.razorpayOrderId}</td></tr>` : ''}
           <tr><td style="padding:6px 0;color:#64748B">Placed</td><td style="padding:6px 0;text-align:right">${formatDate(order.createdAt)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748B">Subtotal</td><td style="padding:6px 0;text-align:right">${formatPrice(order.itemsPrice)}</td></tr>
+          <tr><td style="padding:6px 0;color:#64748B">Shipment Charges</td><td style="padding:6px 0;text-align:right">${Number(order.shippingPrice || 0) > 0 ? formatPrice(order.shippingPrice) : 'FREE'}</td></tr>
+          ${Number(order.discountAmount || 0) > 0 ? `<tr><td style="padding:6px 0;color:#64748B">Discount</td><td style="padding:6px 0;text-align:right">-${formatPrice(order.discountAmount)}</td></tr>` : ''}
           <tr><td style="padding:6px 0;color:#64748B">Total</td><td style="padding:6px 0;text-align:right;font-weight:800;color:#4AA6D9">${formatPrice(order.totalPrice)}</td></tr>
         </table>
 
@@ -148,7 +176,7 @@ const buildOrderHtml = ({ user, order, title, message, metadata }) => {
 
 const notifyOrderEvent = async ({ user, order, type, metadata = {} }) => {
   const copy = orderEventCopy[type] || orderEventCopy.order_placed
-  const title = copy.title
+  const title = typeof copy.title === 'function' ? copy.title(order) : copy.title
   const message = copy.message(order)
   const whatsappUrl = buildOrderWhatsAppUrl({ user, order, title, message })
   const invoicePdf = await buildInvoicePdf(order)

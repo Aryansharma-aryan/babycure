@@ -25,7 +25,7 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
   }
 
   return transporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    from: process.env.EMAIL_FROM || `"BabyCure" <${process.env.SMTP_USER}>`,
     to,
     subject,
     text,

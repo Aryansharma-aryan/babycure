@@ -56,6 +56,7 @@ export const orderService = {
   invoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
   tracking: (id) => api.get(`/orders/${id}/tracking`),
   adminAll: () => api.get('/orders/admin/all'),
+  adminInvoice: (id) => api.get(`/orders/admin/${id}/invoice`, { responseType: 'blob' }),
   adminStatus: (id, payload) => api.patch(`/orders/admin/${id}/status`, payload),
   adminDelivery: (id, payload) => api.patch(`/orders/admin/${id}/delivery`, payload),
 }

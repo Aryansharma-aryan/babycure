@@ -29,7 +29,7 @@ const upload = multer({
   storage: createStorage('babycure/products'),
   fileFilter,
   limits: {
-    files: 4,
+    files: 20,
     fileSize: 3 * 1024 * 1024,
   },
 })
@@ -70,7 +70,7 @@ const localProductUpload = multer({
   storage: createLocalStorage(productUploadsDir),
   fileFilter,
   limits: {
-    files: 4,
+    files: 20,
     fileSize: 3 * 1024 * 1024,
   },
 })
@@ -85,11 +85,8 @@ const uploadReturnImages = (req, res, next) => {
 
 // Allowed product upload field names: support explicit slots and legacy multi-file `images`
 const productFileFields = [
-  { name: 'imageFile0', maxCount: 1 },
-  { name: 'imageFile1', maxCount: 1 },
-  { name: 'imageFile2', maxCount: 1 },
-  { name: 'imageFile3', maxCount: 1 },
-  { name: 'images', maxCount: 4 },
+  ...Array.from({ length: 20 }, (_, index) => ({ name: `imageFile${index}`, maxCount: 1 })),
+  { name: 'images', maxCount: 20 },
 ]
 
 const uploadProductImages = (req, res, next) => {

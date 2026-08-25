@@ -1,7 +1,7 @@
 import { KeyRound, Mail, Phone, ShieldCheck } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Logo from '../components/Logo'
@@ -23,7 +23,18 @@ export default function LoginPage() {
   const [formResetKey, setFormResetKey] = useState(0)
   const [pending, setPending] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
+  const requestedPath = typeof location.state?.from === 'string' && location.state.from.startsWith('/')
+    ? location.state.from
+    : '/'
+  const postAuthPath = isAdminUser(user) ? '/admin' : requestedPath
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(postAuthPath, { replace: true })
+    }
+  }, [isAuthenticated, navigate, postAuthPath])
 
   const title = useMemo(() => {
     if (isAuthenticated) return 'Your Babycure account'
@@ -50,7 +61,7 @@ export default function LoginPage() {
     try {
       if (mode === 'login') {
         const response = await login({ email: data.email, password: data.password })
-        navigate(isAdminUser(response.user) ? '/admin' : '/')
+        navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
         return
       } else {
         const response = await register({
@@ -59,7 +70,7 @@ export default function LoginPage() {
           phone: data.phone,
           password: data.password,
         })
-        navigate(isAdminUser(response.user) ? '/admin' : '/')
+        navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
         return
       }
     } catch (error) {
@@ -101,7 +112,7 @@ export default function LoginPage() {
     setPending(true)
     try {
       const response = await verifyPhoneOtp({ phone, otp: data.otp })
-      navigate(isAdminUser(response.user) ? '/admin' : '/')
+      navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -237,6 +248,11 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
+              {requestedPath === '/checkout' && (
+                <div className="mt-8 rounded-xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold text-brand-blue">
+                  Sign in once to continue directly to checkout. Your bag and delivery details are preserved.
+                </div>
+              )}
               <div className="mt-8 grid grid-cols-2 gap-2 rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12),0_16px_38px_rgba(74,166,217,0.08)]">
                 {[
                   ['email', Mail, 'Email'],

@@ -47,6 +47,16 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null)
+      setLoading(false)
+    }
+
+    window.addEventListener('babycure:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('babycure:unauthorized', handleUnauthorized)
+  }, [])
+
   const register = useCallback(async (payload) => {
     const response = await authService.register(payload)
     setUser(response.user)

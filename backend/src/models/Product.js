@@ -32,6 +32,10 @@ const productSchema = new mongoose.Schema(
     specifications: { type: String, trim: true, default: '' },
     benefits: { type: String, trim: true, default: '' },
     howToUse: { type: String, trim: true, default: '' },
+    comboItems: {
+      type: [{ type: String, trim: true }],
+      default: [],
+    },
     price: {
       type: Number,
       required: [true, 'Product price is required'],
@@ -68,8 +72,8 @@ const productSchema = new mongoose.Schema(
         },
       ],
       validate: {
-        validator: (images) => images.length <= 4,
-        message: 'A product can have a maximum of 4 images',
+        validator: (images) => images.length <= 20,
+        message: 'A product can have a maximum of 20 images',
       },
     },
     stock: {

@@ -4,6 +4,7 @@ const allowedCategoryNames = [
   'Baby Lotion',
   'Baby Diaper Rash Cream',
   'Baby Massage Oil',
+  'Combos',
 ]
 
 module.exports = { allowedCategoryNames }

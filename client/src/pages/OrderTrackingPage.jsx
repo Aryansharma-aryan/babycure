@@ -1,4 +1,4 @@
-import { Check, Clock, ExternalLink, MapPin, Package, RotateCw, Truck } from 'lucide-react'
+import { Check, Clock, ExternalLink, RotateCw, Truck } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -12,6 +12,8 @@ const steps = [
   { key: 'placed', label: 'Placed' },
   { key: 'processing', label: 'Processing' },
   { key: 'packed', label: 'Packed' },
+  { key: 'pickup_scheduled', label: 'Pickup Scheduled' },
+  { key: 'picked_up', label: 'Picked Up' },
   { key: 'shipped', label: 'Shipped' },
   { key: 'in_transit', label: 'In Transit' },
   { key: 'out_for_delivery', label: 'Out for Delivery' },
@@ -23,10 +25,12 @@ const statusRank = {
   processing: 1,
   pending: 1,
   packed: 2,
-  shipped: 3,
-  in_transit: 4,
-  out_for_delivery: 5,
-  delivered: 6,
+  pickup_scheduled: 3,
+  picked_up: 4,
+  shipped: 5,
+  in_transit: 6,
+  out_for_delivery: 7,
+  delivered: 8,
 }
 
 export default function OrderTrackingPage() {
@@ -62,7 +66,7 @@ export default function OrderTrackingPage() {
   }, [authLoading, isAuthenticated, loadTracking, navigate])
 
   useEffect(() => {
-    const timer = window.setInterval(() => loadTracking(true), 15000)
+    const timer = window.setInterval(() => loadTracking(true), 10000)
     return () => window.clearInterval(timer)
   }, [loadTracking])
 
@@ -102,9 +106,8 @@ export default function OrderTrackingPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_330px]">
         <ShipmentJourney activeRank={activeRank} />
-        <aside className="space-y-5">
+        <aside>
           <TrackingInfo tracking={tracking} />
-          <TrackingHistory history={tracking.trackingHistory || []} />
         </aside>
       </div>
     </section>
@@ -140,7 +143,7 @@ function ShipmentJourney({ activeRank }) {
         <div className="relative px-3">
           <div className="absolute left-8 right-8 top-4 h-1 rounded-full bg-slate-100" />
           <div className="absolute left-8 top-4 h-1 rounded-full bg-brand-green transition-all duration-500" style={{ width: `calc((100% - 4rem) * ${progress / 100})` }} />
-          <div className="relative grid grid-cols-7 gap-2">
+          <div className="relative grid grid-cols-9 gap-1">
             {steps.map((step, index) => {
               const completed = index <= safeRank
               const active = index === safeRank
@@ -187,14 +190,23 @@ function ShipmentJourney({ activeRank }) {
 }
 
 function TrackingInfo({ tracking }) {
+  const estimatedDelivery = tracking.estimatedDeliveryDate ? new Date(tracking.estimatedDeliveryDate) : null
+  const daysRemaining = estimatedDelivery
+    ? Math.max(Math.ceil((estimatedDelivery.getTime() - Date.now()) / (24 * 60 * 60 * 1000)), 0)
+    : null
+  const estimatedDeliveryLabel = estimatedDelivery
+    ? `${estimatedDelivery.toLocaleDateString('en-IN', { dateStyle: 'medium' })}${daysRemaining > 0 ? ` (about ${daysRemaining} day${daysRemaining === 1 ? '' : 's'})` : ''}`
+    : 'Awaiting estimate from courier'
+
   return (
     <div className="rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
       <h3 className="font-display text-lg font-semibold text-brand-ink">Courier Details</h3>
       <div className="mt-3 grid gap-2 text-sm font-medium text-slate-600">
         <InfoRow label="Courier" value={tracking.courierName || 'Will update soon'} />
         <InfoRow label="AWB Number" value={tracking.awbCode || tracking.trackingId || 'Not assigned yet'} />
-        <InfoRow label="Estimated Delivery" value={tracking.estimatedDeliveryDate ? formatDate(tracking.estimatedDeliveryDate) : 'Will update soon'} />
+        <InfoRow label="Estimated Delivery" value={estimatedDeliveryLabel} />
       </div>
+      <p className="mt-3 text-xs font-medium leading-5 text-slate-500">Courier estimate based on the delivery location and current shipment movement. It updates automatically when Shiprocket revises the EDD.</p>
       {tracking.trackingUrl && (
         <Link to={tracking.trackingUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-semibold text-white">
           Track on Courier Website <ExternalLink className="h-4 w-4" />
@@ -209,31 +221,6 @@ function InfoRow({ label, value }) {
     <div className="rounded-md bg-brand-mist px-3 py-2">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</p>
       <p className="mt-1 break-words font-semibold text-brand-ink">{value}</p>
-    </div>
-  )
-}
-
-function TrackingHistory({ history }) {
-  return (
-    <div className="rounded-lg border border-sky-100 bg-white p-4 shadow-sm">
-      <h3 className="font-display text-lg font-semibold text-brand-ink">Tracking History</h3>
-      <div className="mt-4 space-y-3">
-        {history.length === 0 ? (
-          <div className="rounded-lg bg-sky-50 p-4 text-sm font-medium text-slate-500">
-            <Package className="mb-2 h-5 w-5 text-brand-blue" />
-            Tracking history will appear after Shiprocket sends the first shipment update.
-          </div>
-        ) : (
-          history.slice().reverse().map((item, index) => (
-            <div key={`${item.status}-${item.updatedAt}-${index}`} className="rounded-lg border border-sky-100 bg-sky-50/70 p-3">
-              <p className="font-display text-sm font-semibold text-brand-ink">{formatStatus(item.status)}</p>
-              <p className="mt-1 text-sm font-medium text-slate-600">{item.message}</p>
-              {item.location && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-blue"><MapPin className="h-3.5 w-3.5" /> {item.location}</p>}
-              <p className="mt-2 text-xs font-medium text-slate-400">{formatDate(item.updatedAt)}</p>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   )
 }

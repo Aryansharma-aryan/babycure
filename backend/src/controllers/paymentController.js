@@ -93,17 +93,29 @@ const createRazorpayOrder = asyncHandler(async (req, res) => {
   const totals = await getCartCheckoutTotals(cart, couponCode)
   const razorpay = getRazorpayClient()
   const amount = Math.round(totals.totalPrice * 100)
+  if (!Number.isSafeInteger(amount) || amount < 100) {
+    throw new AppError('Unable to calculate a valid payment amount. Please refresh your bag and try again.', 400)
+  }
   const receipt = `BC-PAY-${Date.now().toString(36).toUpperCase()}`
 
-  const razorpayOrder = await razorpay.orders.create({
-    amount,
-    currency: 'INR',
-    receipt,
-    notes: {
-      userId: req.user._id.toString(),
-      shippingAddress: shippingAddress.toString(),
-    },
-  })
+  let razorpayOrder
+  try {
+    razorpayOrder = await razorpay.orders.create({
+      amount,
+      currency: 'INR',
+      receipt,
+      notes: {
+        userId: req.user._id.toString(),
+        shippingAddress: shippingAddress.toString(),
+      },
+    })
+  } catch (error) {
+    logger.error({ statusCode: error.statusCode, description: error.error?.description }, 'Razorpay order creation failed')
+    if (error.statusCode === 401) {
+      throw new AppError('Online payment is temporarily unavailable because Razorpay credentials are invalid. Please contact the store administrator.', 503)
+    }
+    throw new AppError('Unable to start online payment. Please try again shortly.', 502)
+  }
 
   await PaymentSession.create({
     user: req.user._id,
@@ -249,7 +261,6 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   const paymentSession = await PaymentSession.findOne({
     razorpayOrderId: razorpay_order_id,
     user: req.user._id,
-    status: 'pending',
   })
 
   if (!paymentSession) {
@@ -265,6 +276,20 @@ const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     paymentSession.status = 'failed'
     await paymentSession.save()
     throw new AppError('Payment verification failed.', 400)
+  }
+
+  if (paymentSession.order) {
+    const existingOrder = await Order.findById(paymentSession.order)
+      .populate('user', 'name email phone')
+      .populate('shippingAddress')
+
+    if (existingOrder) {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment was already verified successfully.',
+        order: existingOrder,
+      })
+    }
   }
 
   const order = await createPaidOrderFromSession({

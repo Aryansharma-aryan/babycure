@@ -4,7 +4,7 @@
   "description": "Secure and scalable BabyCure ecommerce backend foundation.",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/utils/seedDemoData.js",
     "ensure-categories": "node scripts/ensureAllowedCategories.js",
@@ -21,7 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^1.41.3",
+    "cloudinary": "^2.10.1",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -43,6 +43,7 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.11"
   }
 }

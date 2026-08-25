@@ -36,8 +36,47 @@ const getActiveProduct = async (productId) => {
 
 const getProductImage = (product) => product.images?.[0]?.url || ''
 
+// Product records may be replaced during catalogue maintenance. Reconnect old
+// cart lines to an active product with the same saved name, or discard lines
+// whose product no longer exists so the client never receives unusable IDs.
+const reconcileCartItems = async (cart) => {
+  if (!cart.items.length) return cart
+
+  const productIds = cart.items.map((item) => item.product).filter(Boolean)
+  const productNames = cart.items.map((item) => item.productName).filter(Boolean)
+  const products = await Product.find({
+    isActive: true,
+    $or: [
+      { _id: { $in: productIds } },
+      { name: { $in: productNames } },
+    ],
+  })
+  const byId = new Map(products.map((product) => [product._id.toString(), product]))
+  const byName = new Map(products.map((product) => [product.name.trim().toLowerCase(), product]))
+  let changed = false
+
+  cart.items = cart.items.filter((item) => {
+    const currentProduct = byId.get(item.product.toString())
+      || byName.get(String(item.productName || '').trim().toLowerCase())
+    if (!currentProduct) {
+      changed = true
+      return false
+    }
+
+    if (item.product.toString() !== currentProduct._id.toString()) {
+      item.product = currentProduct._id
+      changed = true
+    }
+    return true
+  })
+
+  if (changed) await cart.save()
+  return cart
+}
+
 const sendCart = async (res, cart, message = 'Cart fetched successfully.') => {
-  const populatedCart = await populateCart(Cart.findById(cart._id))
+  const reconciledCart = await reconcileCartItems(cart)
+  const populatedCart = await populateCart(Cart.findById(reconciledCart._id))
 
   res.status(200).json({
     success: true,

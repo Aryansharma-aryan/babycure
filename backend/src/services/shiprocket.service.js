@@ -161,6 +161,30 @@ const getCheapestCourier = (response) => {
     })[0] || null
 }
 
+const getCourierEstimatedDeliveryDate = (courier, from = new Date()) => {
+  if (!courier) return null
+  const suppliedDate = courier.etd || courier.edd || courier.estimated_delivery_date
+  if (suppliedDate) {
+    const parsed = new Date(suppliedDate)
+    if (!Number.isNaN(parsed.getTime())) return parsed
+  }
+
+  const days = Number(courier.estimated_delivery_days || courier.etd_days || courier.delivery_days)
+  if (!Number.isFinite(days) || days < 0) return null
+  const estimated = new Date(from)
+  estimated.setDate(estimated.getDate() + Math.ceil(days))
+  return estimated
+}
+
+const getShiprocketOrderEstimatedDeliveryDate = (response) => {
+  const data = response?.data || response
+  const shipment = data?.shipments?.[0] || {}
+  const suppliedDate = data?.etd_date || shipment?.edd || shipment?.etd || shipment?.expected_delivery_date
+  if (!suppliedDate) return null
+  const parsed = new Date(suppliedDate)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 const buildShiprocketOrderPayload = (order) => {
   const address = order.shippingAddress
   const { firstName, lastName } = getCustomerNameParts(address?.fullName || order.user?.name)
@@ -298,6 +322,7 @@ const schedulePickup = async (shipmentId) =>
   })
 
 const trackShipmentByAWB = async (awbCode) => shiprocketFetch(`/courier/track/awb/${awbCode}`)
+const getShiprocketOrder = async (orderId) => shiprocketFetch(`/orders/show/${orderId}`)
 
 module.exports = {
   assignAWB,
@@ -305,8 +330,11 @@ module.exports = {
   createReturnPickup,
   createShiprocketOrder,
   getCheapestCourier,
+  getCourierEstimatedDeliveryDate,
   getOrderWeight,
   getServiceability,
+  getShiprocketOrder,
+  getShiprocketOrderEstimatedDeliveryDate,
   generateLabel,
   loginToShiprocket,
   schedulePickup,

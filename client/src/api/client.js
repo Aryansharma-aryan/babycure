@@ -31,7 +31,9 @@ api.interceptors.response.use(
       error.message ||
       'Something went wrong. Please try again.'
 
-    if (status === 401) {
+    const isAuthenticationFailure = status === 401 && /authentication required|session has expired|invalid token|login again|user linked to this token/i.test(message)
+
+    if (isAuthenticationFailure) {
       window.dispatchEvent(new CustomEvent('babycure:unauthorized'))
     }
 

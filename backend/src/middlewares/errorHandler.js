@@ -8,7 +8,7 @@ const errorHandler = (err, req, res, next) => {
     if (error.code === 'LIMIT_FILE_COUNT') {
       error = new Error('Maximum 5 images are allowed.')
     } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-      error = new Error('One or more uploaded files used unexpected field names. Use the provided image upload slots (imageFile0..3) or the images field.')
+      error = new Error('One or more uploaded files used unexpected field names. Use the provided numbered image upload slots or the images field.')
     } else {
       error = new Error(error.message)
     }
