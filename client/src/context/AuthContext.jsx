@@ -95,20 +95,6 @@ export function AuthProvider({ children }) {
     toast.success('Logged out successfully')
   }, [])
 
-  const sendPhoneOtp = useCallback(async (payload) => {
-    const response = await authService.sendPhoneOtp(payload)
-    toast.success('OTP sent successfully')
-    return response
-  }, [])
-
-  const verifyPhoneOtp = useCallback(async (payload) => {
-    const response = await authService.verifyPhoneOtp(payload)
-    setSessionMarker()
-    setUser(response.user)
-    toast.success('Phone verified successfully')
-    return response
-  }, [])
-
   const sendPasswordResetOtp = useCallback(async (payload) => {
     const response = await authService.sendPasswordResetOtp(payload)
     toast.success('Password reset OTP sent to your registered email')
@@ -138,12 +124,10 @@ export function AuthProvider({ children }) {
       register,
       resetPassword,
       sendPasswordResetOtp,
-      sendPhoneOtp,
       user,
       updateProfile,
-      verifyPhoneOtp,
     }),
-    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, updateProfile, user, verifyPhoneOtp],
+    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, updateProfile, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

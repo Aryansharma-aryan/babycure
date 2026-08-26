@@ -163,100 +163,6 @@ const updateMe = asyncHandler(async (req, res) => {
   sendAuthResponse(user, 200, res, 'Profile updated successfully.')
 })
 
-const sendPhoneOtp = asyncHandler(async (req, res) => {
-  const { phone } = req.body
-
-  if (!isValidPhone(phone)) {
-    throw new AppError('Please provide a valid phone number.', 400)
-  }
-
-  const normalizedPhone = normalizePhone(phone)
-  const otp = generateOtp()
-  const otpHash = await bcrypt.hash(otp, 12)
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
-
-  await Otp.deleteMany({
-    phone: normalizedPhone,
-    purpose: 'phone_signup',
-  })
-
-  await Otp.create({
-    phone: normalizedPhone,
-    otpHash,
-    expiresAt,
-    purpose: 'phone_signup',
-  })
-
-  const isDevelopment = process.env.NODE_ENV === 'development'
-
-  if (isDevelopment) {
-    console.log(`BabyCure phone OTP for ${normalizedPhone}: ${otp}`)
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'OTP sent successfully.',
-    ...(isDevelopment ? { devOtp: otp } : {}),
-  })
-})
-
-const verifyPhoneOtp = asyncHandler(async (req, res) => {
-  const { phone, otp } = req.body
-
-  if (!isValidPhone(phone) || !/^\d{6}$/.test(String(otp || ''))) {
-    throw new AppError('Invalid OTP request.', 400)
-  }
-
-  const normalizedPhone = normalizePhone(phone)
-  const otpRecord = await Otp.findOne({
-    phone: normalizedPhone,
-    purpose: 'phone_signup',
-  }).select('+otpHash')
-
-  if (!otpRecord) {
-    throw new AppError('Invalid or expired OTP.', 400)
-  }
-
-  if (otpRecord.expiresAt.getTime() < Date.now()) {
-    await Otp.deleteOne({ _id: otpRecord._id })
-    throw new AppError('Invalid or expired OTP.', 400)
-  }
-
-  if (otpRecord.attempts >= 5) {
-    await Otp.deleteOne({ _id: otpRecord._id })
-    throw new AppError('Invalid or expired OTP.', 400)
-  }
-
-  const isMatch = await bcrypt.compare(String(otp), otpRecord.otpHash)
-
-  if (!isMatch) {
-    otpRecord.attempts += 1
-    await otpRecord.save()
-    throw new AppError('Invalid or expired OTP.', 400)
-  }
-
-  let user = await User.findOne({ phone: normalizedPhone })
-
-  if (user?.isBlocked) {
-    throw new AppError('Unable to login. Please contact support.', 403)
-  }
-
-  if (!user) {
-    user = await User.create({
-      name: 'BabyCure User',
-      phone: normalizedPhone,
-      isPhoneVerified: true,
-    })
-  } else if (!user.isPhoneVerified) {
-    user.isPhoneVerified = true
-    await user.save()
-  }
-
-  await Otp.deleteOne({ _id: otpRecord._id })
-
-  sendAuthResponse(user, 200, res, 'Phone verified successfully.')
-})
-
 const sendPasswordResetOtp = asyncHandler(async (req, res) => {
   const { email } = req.body
 
@@ -410,7 +316,5 @@ module.exports = {
   registerUser,
   resetPasswordWithOtp,
   sendPasswordResetOtp,
-  sendPhoneOtp,
   updateMe,
-  verifyPhoneOtp,
 }

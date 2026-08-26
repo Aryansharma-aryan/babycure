@@ -1,4 +1,4 @@
-import { KeyRound, Mail, Phone, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -15,16 +15,13 @@ const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 
 export default function LoginPage() {
   const [mode, setMode] = useState('login')
   const [authType, setAuthType] = useState('email')
-  const [phone, setPhone] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpHint, setOtpHint] = useState('')
   const [resetEmail, setResetEmail] = useState('')
   const [resetOtpSent, setResetOtpSent] = useState(false)
   const [formResetKey, setFormResetKey] = useState(0)
   const [pending, setPending] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, sendPhoneOtp, user, verifyPhoneOtp } = useAuth()
+  const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, user } = useAuth()
   const requestedPath = typeof location.state?.from === 'string' && location.state.from.startsWith('/')
     ? location.state.from
     : '/'
@@ -39,9 +36,8 @@ export default function LoginPage() {
   const title = useMemo(() => {
     if (isAuthenticated) return 'Your Babycure account'
     if (authType === 'forgot') return resetOtpSent ? 'Reset your password' : 'Forgot password'
-    if (authType === 'phone') return otpSent ? 'Verify phone OTP' : 'Continue with phone'
     return mode === 'login' ? 'Sign in to continue' : 'Create your account'
-  }, [authType, isAuthenticated, mode, otpSent, resetOtpSent])
+  }, [authType, isAuthenticated, mode, resetOtpSent])
 
   const handleEmailSubmit = async (event) => {
     event.preventDefault()
@@ -73,46 +69,6 @@ export default function LoginPage() {
         navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
         return
       }
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const handleSendOtp = async (event) => {
-    event.preventDefault()
-
-    if (!phonePattern.test(phone)) {
-      toast.error('Please enter a valid 10 digit phone number')
-      return
-    }
-
-    setPending(true)
-    try {
-      const response = await sendPhoneOtp({ phone })
-      setOtpHint(response.devOtp || '')
-      setOtpSent(true)
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const handleVerifyOtp = async (event) => {
-    event.preventDefault()
-    const data = Object.fromEntries(new FormData(event.currentTarget))
-
-    if (!/^\d{6}$/.test(String(data.otp || ''))) {
-      toast.error('Please enter the 6 digit OTP')
-      return
-    }
-
-    setPending(true)
-    try {
-      const response = await verifyPhoneOtp({ phone, otp: data.otp })
-      navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -181,9 +137,6 @@ export default function LoginPage() {
       await logout()
       setMode('login')
       setAuthType('email')
-      setPhone('')
-      setOtpSent(false)
-      setOtpHint('')
       setResetEmail('')
       setResetOtpSent(false)
       setFormResetKey((key) => key + 1)
@@ -240,7 +193,6 @@ export default function LoginPage() {
                 {user?.email && <p>Email: {user.email}</p>}
                 {user?.phone && <p>Phone: {user.phone}</p>}
                 <p>Role: {user?.role}</p>
-                <p>Phone verified: {user?.isPhoneVerified ? 'Yes' : 'No'}</p>
               </div>
               <Button type="button" variant="outline" className="mt-7" onClick={handleLogout} disabled={pending}>
                 Logout
@@ -253,22 +205,6 @@ export default function LoginPage() {
                   Sign in once to continue directly to checkout. Your bag and delivery details are preserved.
                 </div>
               )}
-              <div className="mt-8 grid grid-cols-2 gap-2 rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12),0_16px_38px_rgba(74,166,217,0.08)]">
-                {[
-                  ['email', Mail, 'Email'],
-                  ['phone', Phone, 'Phone OTP'],
-                ].map(([item, Icon, label]) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-black transition hover:text-brand-blue ${authType === item ? 'bg-gradient-to-r from-brand-blue to-brand-green text-white shadow-[0_14px_35px_rgba(74,166,217,0.20)]' : 'text-slate-500'}`}
-                    onClick={() => setAuthType(item)}
-                  >
-                    <Icon className="h-4 w-4" /> {label}
-                  </button>
-                ))}
-              </div>
-
               <h2 className="mt-6 font-display text-3xl font-black text-slate-950">{title}</h2>
 
               {authType === 'email' ? (
@@ -339,39 +275,7 @@ export default function LoginPage() {
                     Back to login
                   </button>
                 </form>
-              ) : (
-                <form className="mt-7" onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}>
-                  <Input
-                    label="Phone Number"
-                    name="phone"
-                    inputMode="numeric"
-                    maxLength="10"
-                    placeholder="9876543210"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
-                    disabled={otpSent}
-                    autoComplete="tel"
-                  />
-                  {otpSent && (
-                    <div className="mt-4 space-y-3">
-                      {otpHint && (
-                        <div className="rounded-md border border-green-100 bg-green-50 px-4 py-3 text-sm font-black text-brand-green">
-                          Development OTP: <span className="font-display text-lg text-slate-950">{otpHint}</span>
-                        </div>
-                      )}
-                      <Input label="6 Digit OTP" name="otp" inputMode="numeric" maxLength="6" placeholder="123456" autoComplete="one-time-code" />
-                    </div>
-                  )}
-                  <Button type="submit" variant="green" className="mt-7 w-full" disabled={pending}>
-                    {pending ? 'Please wait...' : otpSent ? 'Verify OTP' : 'Send OTP'}
-                  </Button>
-                  {otpSent && (
-                    <button type="button" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-brand-blue" onClick={() => { setOtpSent(false); setOtpHint('') }}>
-                      <KeyRound className="h-4 w-4" /> Change phone number
-                    </button>
-                  )}
-                </form>
-              )}
+              ) : null}
             </>
           )}
         </div>

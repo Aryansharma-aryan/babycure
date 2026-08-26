@@ -2,11 +2,6 @@ const mongoose = require('mongoose')
 
 const otpSchema = new mongoose.Schema(
   {
-    phone: {
-      type: String,
-      trim: true,
-      index: true,
-    },
     email: {
       type: String,
       lowercase: true,
@@ -32,20 +27,14 @@ const otpSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['phone_signup', 'password_reset'],
-      default: 'phone_signup',
+      enum: ['password_reset'],
+      default: 'password_reset',
     },
   },
   {
     timestamps: true,
   },
 )
-
-otpSchema.pre('validate', function requireOtpTarget() {
-  if (!this.phone && !this.email) {
-    this.invalidate('email', 'OTP requires phone or email.')
-  }
-})
 
 const Otp = mongoose.model('Otp', otpSchema)
 

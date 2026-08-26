@@ -1,10 +1,29 @@
 const Category = require('../models/Category')
+const Address = require('../models/Address')
+const Cart = require('../models/Cart')
+const Notification = require('../models/Notification')
 const Order = require('../models/Order')
+const PaymentSession = require('../models/PaymentSession')
 const Product = require('../models/Product')
+const Review = require('../models/Review')
 const ReturnRequest = require('../models/ReturnRequest')
 const User = require('../models/User')
+const Wishlist = require('../models/Wishlist')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
+
+const deleteOrderRecords = async (filter) => {
+  const orderIds = await Order.find(filter).distinct('_id')
+  if (!orderIds.length) return 0
+
+  await Promise.all([
+    PaymentSession.deleteMany({ order: { $in: orderIds } }),
+    ReturnRequest.deleteMany({ order: { $in: orderIds } }),
+    Review.updateMany({ order: { $in: orderIds } }, { $unset: { order: 1 } }),
+  ])
+  const result = await Order.deleteMany({ _id: { $in: orderIds } })
+  return result.deletedCount
+}
 
 const getDashboard = asyncHandler(async (req, res) => {
   const [
@@ -184,7 +203,52 @@ const updateUser = asyncHandler(async (req, res) => {
   })
 })
 
+const deleteOrder = asyncHandler(async (req, res) => {
+  const deletedCount = await deleteOrderRecords({ _id: req.params.id })
+  if (!deletedCount) throw new AppError('Order not found.', 404)
+  res.status(200).json({ success: true, message: 'Order history deleted successfully.' })
+})
+
+const deleteAllOrders = asyncHandler(async (req, res) => {
+  const deletedCount = await deleteOrderRecords({})
+  res.status(200).json({ success: true, message: `${deletedCount} order(s) deleted successfully.`, deletedCount })
+})
+
+const deleteCustomerRecords = async (userIds) => {
+  if (!userIds.length) return 0
+  await deleteOrderRecords({ user: { $in: userIds } })
+  await Promise.all([
+    Address.deleteMany({ user: { $in: userIds } }),
+    Cart.deleteMany({ user: { $in: userIds } }),
+    Notification.deleteMany({ user: { $in: userIds } }),
+    PaymentSession.deleteMany({ user: { $in: userIds } }),
+    ReturnRequest.deleteMany({ user: { $in: userIds } }),
+    Review.deleteMany({ user: { $in: userIds } }),
+    Wishlist.deleteMany({ user: { $in: userIds } }),
+  ])
+  const result = await User.deleteMany({ _id: { $in: userIds }, role: { $ne: 'admin' } })
+  return result.deletedCount
+}
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select('role')
+  if (!user) throw new AppError('User not found.', 404)
+  if (user.role === 'admin') throw new AppError('Admin accounts cannot be deleted here.', 400)
+  await deleteCustomerRecords([user._id])
+  res.status(200).json({ success: true, message: 'Customer and related history deleted successfully.' })
+})
+
+const deleteAllUsers = asyncHandler(async (req, res) => {
+  const userIds = await User.find({ role: { $ne: 'admin' } }).distinct('_id')
+  const deletedCount = await deleteCustomerRecords(userIds)
+  res.status(200).json({ success: true, message: `${deletedCount} customer(s) deleted. Admin accounts were preserved.`, deletedCount })
+})
+
 module.exports = {
+  deleteAllOrders,
+  deleteAllUsers,
+  deleteOrder,
+  deleteUser,
   getDashboard,
   getUsers,
   updateUser,

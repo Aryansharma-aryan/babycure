@@ -783,6 +783,34 @@ function OrdersPanel() {
   const [receiptBusy, setReceiptBusy] = useState('')
   const shipmentBusyRef = useRef(false)
 
+  const deleteOrder = async (order) => {
+    if (!window.confirm(`Permanently delete order ${order.orderNumber} and its related payment/return history?`)) return
+    try {
+      await adminService.deleteOrder(order._id)
+      toast.success('Order history deleted')
+      setDetailsOrder(null)
+      setSelected(null)
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  const deleteAllOrders = async () => {
+    if (!orders.length) return toast.error('There are no orders to delete')
+    if (!window.confirm(`Permanently delete all ${orders.length} orders and their related history? This cannot be undone.`)) return
+    if (!window.confirm('Final confirmation: delete ALL order history?')) return
+    try {
+      const response = await adminService.deleteAllOrders()
+      toast.success(response.message)
+      setDetailsOrder(null)
+      setSelected(null)
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
   const load = useCallback(async () => {
     try {
       const response = await orderService.adminAll()
@@ -927,7 +955,7 @@ function OrdersPanel() {
           </form>
         </Panel>
       )}
-      <Panel title="Manage Orders" action={<Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button>}>
+      <Panel title="Manage Orders" action={<div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={load}><RefreshCw className="h-4 w-4" /> Refresh</Button><Button variant="outline" onClick={deleteAllOrders}><Trash2 className="h-4 w-4" /> Delete All</Button></div>}>
         <Table headers={['Order', 'Customer', 'Total', 'Status', 'Payment', 'Actions']}>
           {orders.map((order) => (
             <tr key={order._id}>
@@ -945,6 +973,7 @@ function OrdersPanel() {
                   <Button variant="ghost" onClick={() => setDetailsOrder(order)} className="px-4 py-2">View All</Button>
                   <Button variant="outline" disabled={receiptBusy === order._id} onClick={() => downloadReceipt(order)} className="px-4 py-2"><Download className="h-4 w-4" /> {receiptBusy === order._id ? 'Downloading...' : 'Receipt'}</Button>
                   <Button variant="outline" onClick={() => setSelected(order)} className="px-4 py-2"><Truck className="h-4 w-4" /> Shipment</Button>
+                  <Button variant="outline" onClick={() => deleteOrder(order)} className="px-4 py-2 text-red-600"><Trash2 className="h-4 w-4" /> Delete</Button>
                 </div>
               </Td>
             </tr>
@@ -1418,9 +1447,34 @@ function UsersPanel() {
     }
   }
 
+  const deleteUser = async (user) => {
+    if (!window.confirm(`Permanently delete ${user.name || user.email || 'this customer'} and all related account history?`)) return
+    try {
+      await adminService.deleteUser(user._id)
+      toast.success('Customer deleted')
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  const deleteAllUsers = async () => {
+    const customerCount = users.filter((user) => user.role !== 'admin').length
+    if (!customerCount) return toast.error('There are no customer accounts to delete')
+    if (!window.confirm(`Permanently delete all ${customerCount} customer accounts and their related data? Admin accounts will be preserved.`)) return
+    if (!window.confirm('Final confirmation: delete ALL customers?')) return
+    try {
+      const response = await adminService.deleteAllUsers()
+      toast.success(response.message)
+      await load()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
   return (
-    <Panel title="View Users">
-      <Table headers={['Name', 'Email/Phone', 'Role', 'Blocked', 'Joined']}>
+    <Panel title="View Users" action={<Button variant="outline" onClick={deleteAllUsers}><Trash2 className="h-4 w-4" /> Delete All Customers</Button>}>
+      <Table headers={['Name', 'Email/Phone', 'Role', 'Blocked', 'Joined', 'Actions']}>
         {users.map((user) => (
           <tr key={user._id}>
             <Td>{user.name || 'User'}</Td>
@@ -1433,6 +1487,7 @@ function UsersPanel() {
             </Td>
             <Td><button onClick={() => updateUser(user, { isBlocked: !user.isBlocked })} className={`rounded px-3 py-2 text-xs font-extrabold ${user.isBlocked ? 'bg-red-50 text-red-600' : 'bg-brand-leaf text-brand-green'}`}>{user.isBlocked ? 'Unblock' : 'Block'}</button></Td>
             <Td>{formatDate(user.createdAt)}</Td>
+            <Td>{user.role === 'admin' ? <span className="text-xs font-extrabold text-slate-400">Protected</span> : <Button variant="outline" onClick={() => deleteUser(user)} className="px-4 py-2 text-red-600"><Trash2 className="h-4 w-4" /> Delete</Button>}</Td>
           </tr>
         ))}
       </Table>

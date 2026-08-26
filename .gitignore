@@ -5,3 +5,4 @@ backend/.env
 client/.env
 node_modules/
 dist/
+backend-local*.log

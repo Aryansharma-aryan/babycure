@@ -5,8 +5,6 @@ export const authService = {
   login: (payload) => api.post('/auth/login', payload),
   register: (payload) => api.post('/auth/register', payload),
   logout: () => api.post('/auth/logout'),
-  sendPhoneOtp: (payload) => api.post('/auth/send-phone-otp', payload),
-  verifyPhoneOtp: (payload) => api.post('/auth/verify-phone-otp', payload),
   sendPasswordResetOtp: (payload) => api.post('/auth/password/forgot', payload),
   resetPassword: (payload) => api.post('/auth/password/reset', payload),
   updateProfile: (payload) => api.patch('/auth/me', payload),
@@ -115,6 +113,10 @@ export const adminService = {
   deleteContactInquiry: (id) => api.delete(`/admin/contact-inquiries/${id}`),
   users: () => api.get('/admin/users'),
   updateUser: (id, payload) => api.patch(`/admin/users/${id}`, payload),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  deleteAllUsers: () => api.delete('/admin/users'),
+  deleteOrder: (id) => api.delete(`/admin/orders/${id}`),
+  deleteAllOrders: () => api.delete('/admin/orders'),
 }
 
 export const notificationService = {

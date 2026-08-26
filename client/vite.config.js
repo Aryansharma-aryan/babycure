@@ -10,11 +10,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://babycure.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'https://babycure.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },
