@@ -22,7 +22,9 @@ const verifyToken = (token, options = {}) => {
 }
 
 const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === 'production'
+  // Render sets RENDER=true at runtime. Treat it as production even if a
+  // dashboard variable accidentally overrides NODE_ENV to development.
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true'
 
   return {
     httpOnly: true,
