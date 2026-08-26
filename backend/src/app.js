@@ -34,14 +34,19 @@ const wishlistRoutes = require('./routes/wishlistRoutes')
 
 const app = express()
 
-const allowedOrigins = (
-  process.env.CLIENT_URLS ||
-  process.env.CLIENT_URL ||
-  'https://www.babycureindia.com,https://babycureindia.com'
-)
+const productionOrigins = [
+  'https://www.babycureindia.com',
+  'https://babycureindia.com',
+]
+
+const configuredOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
+
+// Always allow the official storefront. Environment values extend this list
+// instead of replacing it, preventing stale Render settings from blocking it.
+const allowedOrigins = [...new Set([...productionOrigins, ...configuredOrigins])]
 
 const isDevelopmentOrigin = (origin) => {
   if (process.env.NODE_ENV !== 'development' || !origin) return false
