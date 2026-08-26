@@ -1,5 +1,11 @@
 import axios from 'axios'
 
+const SESSION_MARKER_KEY = 'babycure:has-session'
+
+export const hasSessionMarker = () => localStorage.getItem(SESSION_MARKER_KEY) === 'true'
+export const setSessionMarker = () => localStorage.setItem(SESSION_MARKER_KEY, 'true')
+export const clearSessionMarker = () => localStorage.removeItem(SESSION_MARKER_KEY)
+
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -36,6 +42,7 @@ api.interceptors.response.use(
     const isAuthenticationFailure = status === 401 && /authentication required|session has expired|invalid token|login again|user linked to this token/i.test(message)
 
     if (isAuthenticationFailure) {
+      clearSessionMarker()
       window.dispatchEvent(new CustomEvent('babycure:unauthorized'))
     }
 

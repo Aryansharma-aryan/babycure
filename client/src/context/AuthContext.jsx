@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { clearSessionMarker, hasSessionMarker, setSessionMarker } from '../api/client'
 import { authService } from '../api/services'
 import { AuthContext } from './auth-context'
 
@@ -8,6 +9,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   const refreshUser = useCallback(async () => {
+    if (!hasSessionMarker()) {
+      setUser(null)
+      setLoading(false)
+      return null
+    }
+
     try {
       const response = await authService.me()
       setUser(response.user)
@@ -24,6 +31,11 @@ export function AuthProvider({ children }) {
     let active = true
 
     const loadSession = async () => {
+      if (!hasSessionMarker()) {
+        setLoading(false)
+        return
+      }
+
       try {
         const response = await authService.me()
         if (active) {
@@ -59,6 +71,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (payload) => {
     const response = await authService.register(payload)
+    setSessionMarker()
     setUser(response.user)
     toast.success('Account created successfully')
     return response
@@ -66,14 +79,19 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (payload) => {
     const response = await authService.login(payload)
+    setSessionMarker()
     setUser(response.user)
     toast.success('Logged in successfully')
     return response
   }, [])
 
   const logout = useCallback(async () => {
-    await authService.logout()
-    setUser(null)
+    try {
+      await authService.logout()
+    } finally {
+      clearSessionMarker()
+      setUser(null)
+    }
     toast.success('Logged out successfully')
   }, [])
 
@@ -85,6 +103,7 @@ export function AuthProvider({ children }) {
 
   const verifyPhoneOtp = useCallback(async (payload) => {
     const response = await authService.verifyPhoneOtp(payload)
+    setSessionMarker()
     setUser(response.user)
     toast.success('Phone verified successfully')
     return response
