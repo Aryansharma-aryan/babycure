@@ -34,7 +34,11 @@ const wishlistRoutes = require('./routes/wishlistRoutes')
 
 const app = express()
 
-const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || 'http://localhost:5173')
+const allowedOrigins = (
+  process.env.CLIENT_URLS ||
+  process.env.CLIENT_URL ||
+  'https://www.babycureindia.com,https://babycureindia.com'
+)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
