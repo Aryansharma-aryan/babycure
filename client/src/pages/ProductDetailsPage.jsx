@@ -1,4 +1,4 @@
-import { BadgeCheck, ChevronDown, Heart, Minus, Plus, Star } from 'lucide-react'
+import { ChevronDown, Heart, Minus, Plus, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -15,6 +15,7 @@ import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
 import { getProductImage } from '../utils/products'
 import { resolveMediaUrl } from '../api/client'
+import Seo from '../components/Seo'
 
 export default function ProductDetailsPage() {
   const { id } = useParams()
@@ -55,6 +56,35 @@ export default function ProductDetailsPage() {
   }, [loading, location.hash])
 
   const images = useMemo(() => (product?.images || []).map((image) => ({ ...image, url: resolveMediaUrl(image.url) })), [product])
+  const productSchema = useMemo(() => {
+    if (!product) return null
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: product.shortDescription || product.description,
+      image: (product.images || []).map((item) => resolveMediaUrl(item.url)).filter(Boolean),
+      sku: product.sku,
+      brand: { '@type': 'Brand', name: product.brand || 'Baby Cure' },
+      offers: {
+        '@type': 'Offer',
+        url: `https://www.babycureindia.com/product/${product._id}`,
+        priceCurrency: 'INR',
+        price: product.price,
+        availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        itemCondition: 'https://schema.org/NewCondition',
+        seller: { '@type': 'Organization', name: 'Baby Cure India' },
+      },
+    }
+    if (product.ratingsQuantity > 0) {
+      schema.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: product.ratingsAverage,
+        reviewCount: product.ratingsQuantity,
+      }
+    }
+    return schema
+  }, [product])
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
@@ -87,7 +117,15 @@ export default function ProductDetailsPage() {
   if (missing || !product) return <Navigate to="/category" replace />
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <>
+      <Seo
+        title={`${product.name} | Buy Online at Baby Cure India`}
+        description={product.shortDescription || `Buy ${product.name} online from Baby Cure India with trusted baby care support and delivery across India.`}
+        image={activeImage || undefined}
+        type="product"
+        jsonLd={productSchema}
+      />
+      <section className="mx-auto max-w-7xl px-4 py-8">
       <PageHeader eyebrow="Product Detail" title={product.name} copy={product.shortDescription || 'Premium baby-care detail with gallery, quantity selector and safe checkout.'} backTo="/category" backLabel="Continue shopping" />
       <div className="grid gap-10 rounded-md border border-slate-200 bg-white p-6 shadow-soft lg:grid-cols-[1fr_1fr]">
         <div className="grid gap-5 sm:grid-cols-[88px_1fr]">
@@ -146,7 +184,8 @@ export default function ProductDetailsPage() {
         {features.map((feature) => <FeatureCard key={feature.title} {...feature} />)}
       </div>
       <Reviews product={product} reviews={reviews} setReviews={setReviews} canReview={isAuthenticated} />
-    </section>
+      </section>
+    </>
   )
 }
 

@@ -3,11 +3,13 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import Footer from './Footer'
 import Header from './Header'
 import MobileBottomNav from './MobileBottomNav'
+import Seo from './Seo'
 
 export default function Layout() {
   return (
     <>
       <ScrollToTop />
+      <Seo />
       <Header />
       <main>
         <Outlet />
