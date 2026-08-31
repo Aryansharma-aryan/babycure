@@ -6,5 +6,6 @@ Disallow: /cart
 Disallow: /checkout
 Disallow: /login
 Disallow: /orders
+Disallow: /wishlist
 
 Sitemap: https://www.babycureindia.com/sitemap.xml

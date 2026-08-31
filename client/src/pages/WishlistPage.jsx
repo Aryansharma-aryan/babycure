@@ -9,7 +9,7 @@ import { PageSkeleton } from '../components/Skeleton'
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import { formatPrice } from '../utils/format'
-import { getProductImage } from '../utils/products'
+import { getProductImage, getProductPath } from '../utils/products'
 
 export default function WishlistPage() {
   const navigate = useNavigate()
@@ -98,7 +98,7 @@ export default function WishlistPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => (
               <article key={product._id} className="group rounded-[1.6rem] border border-sky-100 bg-white p-4 shadow-[0_18px_60px_rgba(74,166,217,0.10)] transition duration-300 hover:-translate-y-1.5 hover:shadow-premium">
-                <Link to={`/product/${product._id}`} className="block">
+                <Link to={getProductPath(product)} className="block">
                   <div className="grid h-56 place-items-center overflow-hidden rounded-[1.3rem] bg-gradient-to-br from-sky-50 to-green-50">
                     {getProductImage(product) ? (
                       <img src={getProductImage(product)} alt={product.name} className="h-full w-full object-contain p-6 transition duration-300 group-hover:scale-105" loading="lazy" />

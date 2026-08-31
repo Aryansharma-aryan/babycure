@@ -58,6 +58,8 @@ export default function ProductDetailsPage() {
   const images = useMemo(() => (product?.images || []).map((image) => ({ ...image, url: resolveMediaUrl(image.url) })), [product])
   const productSchema = useMemo(() => {
     if (!product) return null
+    const productPath = `/product/${encodeURIComponent(product.slug || product._id)}`
+    const productUrl = `https://www.babycureindia.com${productPath}`
     const schema = {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -65,15 +67,30 @@ export default function ProductDetailsPage() {
       description: product.shortDescription || product.description,
       image: (product.images || []).map((item) => resolveMediaUrl(item.url)).filter(Boolean),
       sku: product.sku,
+      url: productUrl,
+      category: product.category?.name,
       brand: { '@type': 'Brand', name: product.brand || 'Baby Cure' },
       offers: {
         '@type': 'Offer',
-        url: `https://www.babycureindia.com/product/${product._id}`,
+        url: productUrl,
         priceCurrency: 'INR',
         price: product.price,
         availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         itemCondition: 'https://schema.org/NewCondition',
         seller: { '@type': 'Organization', name: 'Baby Cure India' },
+        shippingDetails: {
+          '@type': 'OfferShippingDetails',
+          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          shippingRate: { '@type': 'MonetaryAmount', value: 60, currency: 'INR' },
+        },
+        hasMerchantReturnPolicy: {
+          '@type': 'MerchantReturnPolicy',
+          applicableCountry: 'IN',
+          returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+          merchantReturnDays: 7,
+          returnMethod: 'https://schema.org/ReturnByMail',
+          returnFees: 'https://schema.org/FreeReturn',
+        },
       },
     }
     if (product.ratingsQuantity > 0) {
@@ -83,7 +100,15 @@ export default function ProductDetailsPage() {
         reviewCount: product.ratingsQuantity,
       }
     }
-    return schema
+    return [schema, {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.babycureindia.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Baby Care Products', item: 'https://www.babycureindia.com/category' },
+        { '@type': 'ListItem', position: 3, name: product.name, item: productUrl },
+      ],
+    }]
   }, [product])
 
   const handleAdd = async () => {
@@ -124,6 +149,7 @@ export default function ProductDetailsPage() {
         image={activeImage || undefined}
         type="product"
         jsonLd={productSchema}
+        canonicalPath={`/product/${encodeURIComponent(product.slug || product._id)}`}
       />
       <section className="mx-auto max-w-7xl px-4 py-8">
       <PageHeader eyebrow="Product Detail" title={product.name} copy={product.shortDescription || 'Premium baby-care detail with gallery, quantity selector and safe checkout.'} backTo="/category" backLabel="Continue shopping" />

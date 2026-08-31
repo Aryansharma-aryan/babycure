@@ -4,6 +4,11 @@ export function getProductId(product) {
   return product?._id || product?.id || product?.product?._id || product?.product
 }
 
+export function getProductPath(product) {
+  const identifier = product?.slug || product?.product?.slug || getProductId(product)
+  return identifier ? `/product/${encodeURIComponent(identifier)}` : '/category'
+}
+
 export function getProductImage(product) {
   const source = product?.images?.[0]?.url || product?.productImage || product?.image || ''
   // Demo seed data used generic stock images. Do not present them as BabyCure products.

@@ -6,10 +6,11 @@ import MobileBottomNav from './MobileBottomNav'
 import Seo from './Seo'
 
 export default function Layout() {
+  const { pathname } = useLocation()
   return (
     <>
       <ScrollToTop />
-      <Seo />
+      {!pathname.startsWith('/product/') && <Seo />}
       <Header />
       <main>
         <Outlet />

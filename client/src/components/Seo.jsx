@@ -30,10 +30,10 @@ const setMeta = (selector, attributes) => {
   Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value))
 }
 
-export default function Seo({ title, description, image, type = 'website', robots, jsonLd }) {
+export default function Seo({ title, description, image, type = 'website', robots, jsonLd, canonicalPath: canonicalPathOverride }) {
   const { pathname } = useLocation()
   const [routeTitle, routeDescription] = routeSeo[pathname] || ['Baby Cure | Gentle Baby Care Products India', DEFAULT_DESCRIPTION]
-  const canonicalPath = pathname === '/' ? '' : pathname.replace(/\/$/, '')
+  const canonicalPath = canonicalPathOverride ?? (pathname === '/' ? '' : pathname.replace(/\/$/, ''))
   const canonical = `${SITE_URL}${canonicalPath}`
   const shouldNoIndex = noIndexPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 
