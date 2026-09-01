@@ -29,7 +29,7 @@
       ]
     },
     {
-      "source": "/(admin|account|cart|checkout|login|orders)/:path*",
+      "source": "/(admin|account|cart|checkout|login|orders|wishlist)/:path*",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
