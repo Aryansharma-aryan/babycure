@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import Layout from './components/Layout'
@@ -7,28 +7,72 @@ import AppSplash from './components/AppSplash'
 import { PageSkeleton } from './components/Skeleton'
 import ToastManager from './components/ToastManager'
 
-const HomePage = lazy(() => import('./pages/HomePage'))
-const CategoryPage = lazy(() => import('./pages/CategoryPage'))
-const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'))
-const CartPage = lazy(() => import('./pages/CartPage'))
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
-const BlogPage = lazy(() => import('./pages/BlogPage'))
-const ContactPage = lazy(() => import('./pages/ContactPage'))
-const AboutPage = lazy(() => import('./pages/AboutPage'))
-const WhyBabyCurePage = lazy(() => import('./pages/WhyBabyCurePage'))
-const PolicyPage = lazy(() => import('./pages/PolicyPage'))
-const LoginPage = lazy(() => import('./pages/LoginPage'))
-const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'))
-const OrderDetailsPage = lazy(() => import('./pages/OrderDetailsPage'))
-const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'))
-const AdminPage = lazy(() => import('./pages/AdminPage'))
-const WishlistPage = lazy(() => import('./pages/WishlistPage'))
-const AccountPage = lazy(() => import('./pages/AccountPage'))
+const CHUNK_RELOAD_KEY = 'babycure:chunk-reload'
+
+function lazyWithReload(importer) {
+  return lazy(async () => {
+    try {
+      const module = await importer()
+      sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+      return module
+    } catch (error) {
+      const message = String(error?.message || error)
+      const isChunkError = /failed to fetch dynamically imported module|loading chunk|importing a module script failed/i.test(message)
+      const lastReload = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0)
+
+      if (isChunkError && Date.now() - lastReload > 30_000) {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+        window.location.reload()
+        return new Promise(() => {})
+      }
+
+      throw error
+    }
+  })
+}
+
+const HomePage = lazyWithReload(() => import('./pages/HomePage'))
+const CategoryPage = lazyWithReload(() => import('./pages/CategoryPage'))
+const ProductDetailsPage = lazyWithReload(() => import('./pages/ProductDetailsPage'))
+const CartPage = lazyWithReload(() => import('./pages/CartPage'))
+const CheckoutPage = lazyWithReload(() => import('./pages/CheckoutPage'))
+const BlogPage = lazyWithReload(() => import('./pages/BlogPage'))
+const ContactPage = lazyWithReload(() => import('./pages/ContactPage'))
+const AboutPage = lazyWithReload(() => import('./pages/AboutPage'))
+const WhyBabyCurePage = lazyWithReload(() => import('./pages/WhyBabyCurePage'))
+const PolicyPage = lazyWithReload(() => import('./pages/PolicyPage'))
+const LoginPage = lazyWithReload(() => import('./pages/LoginPage'))
+const MyOrdersPage = lazyWithReload(() => import('./pages/MyOrdersPage'))
+const OrderDetailsPage = lazyWithReload(() => import('./pages/OrderDetailsPage'))
+const OrderTrackingPage = lazyWithReload(() => import('./pages/OrderTrackingPage'))
+const AdminPage = lazyWithReload(() => import('./pages/AdminPage'))
+const WishlistPage = lazyWithReload(() => import('./pages/WishlistPage'))
+const AccountPage = lazyWithReload(() => import('./pages/AccountPage'))
+
+function RouteErrorPage() {
+  const error = useRouteError()
+  const isChunkError = /failed to fetch dynamically imported module|loading chunk|importing a module script failed/i.test(String(error?.message || error || ''))
+
+  return (
+    <main className="grid min-h-screen place-items-center bg-sky-50 px-4 text-center">
+      <section className="w-full max-w-lg rounded-2xl border border-blue-100 bg-white p-8 shadow-soft">
+        <h1 className="font-display text-3xl font-black text-slate-950">{isChunkError ? 'A new version is ready' : 'Something went wrong'}</h1>
+        <p className="mt-3 font-medium leading-7 text-slate-600">
+          {isChunkError ? 'Refresh once to load the latest Baby Cure update.' : 'Please reload the page and try again.'}
+        </p>
+        <button type="button" className="mt-6 bg-brand-ink px-6 py-3 font-extrabold text-white transition hover:bg-brand-blue" onClick={() => window.location.reload()}>
+          Refresh page
+        </button>
+      </section>
+    </main>
+  )
+}
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <HomePage /> },
       { path: 'category', element: <CategoryPage /> },
