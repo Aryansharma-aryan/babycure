@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 
 const siteUrl = 'https://www.babycureindia.com'
 const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL || 'https://babycure.onrender.com/api'
@@ -33,19 +33,30 @@ async function getProducts() {
     return payload.products || []
   } catch (error) {
     console.warn(`Sitemap: live products unavailable (${error.message}); writing static URLs only.`)
-    return []
+    return null
   }
 }
 
 const products = await getProducts()
-const urls = [
-  ...staticPages.map(([path, changefreq, priority]) => ({ loc: `${siteUrl}${path}`, lastmod: today, changefreq, priority })),
-  ...products.filter((product) => product.slug || product._id).map((product) => ({
+let productEntries = []
+if (products) {
+  productEntries = products.filter((product) => product.slug || product._id).map((product) => ({
     loc: `${siteUrl}/product/${encodeURIComponent(product.slug || product._id)}`,
     lastmod: String(product.updatedAt || today).slice(0, 10),
     changefreq: 'weekly',
     priority: '0.8',
-  })),
+  }))
+} else {
+  try {
+    const existing = await readFile(outputFile, 'utf8')
+    productEntries = [...existing.matchAll(/<url><loc>(https:\/\/www\.babycureindia\.com\/product\/[^<]+)<\/loc><lastmod>([^<]+)<\/lastmod><changefreq>([^<]+)<\/changefreq><priority>([^<]+)<\/priority><\/url>/g)]
+      .map((match) => ({ loc: match[1], lastmod: match[2], changefreq: match[3], priority: match[4] }))
+    console.warn(`Sitemap: preserved ${productEntries.length} existing product URLs.`)
+  } catch { /* Static pages still produce a valid sitemap on a first build. */ }
+}
+const urls = [
+  ...staticPages.map(([path, changefreq, priority]) => ({ loc: `${siteUrl}${path}`, lastmod: today, changefreq, priority })),
+  ...productEntries,
 ]
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -55,4 +66,4 @@ ${urls.map(({ loc, lastmod, changefreq, priority }) => `  <url><loc>${escapeXml(
 `
 
 await writeFile(outputFile, xml, 'utf8')
-console.log(`Sitemap: wrote ${urls.length} URLs (${products.length} products).`)
+console.log(`Sitemap: wrote ${urls.length} URLs (${productEntries.length} products).`)
