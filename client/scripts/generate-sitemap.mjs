@@ -1,12 +1,11 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 
-const siteUrl = 'https://www.babycureindia.com'
-const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL || 'https://babycure.onrender.com/api'
+import { siteUrl, apiUrl, fetchCatalog, saveCatalog } from './seo-catalog.mjs'
 const outputFile = new URL('../public/sitemap.xml', import.meta.url)
-const today = new Date().toISOString().slice(0, 10)
 
 const staticPages = [
   ['/', 'weekly', '1.0'],
+  ['/products', 'weekly', '0.9'],
   ['/category', 'daily', '0.9'],
   ['/about', 'monthly', '0.7'],
   ['/why-baby-cure', 'monthly', '0.8'],
@@ -22,48 +21,14 @@ const escapeXml = (value) => String(value).replace(/[<>&'\"]/g, (character) => (
   '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;',
 })[character])
 
-async function getProducts() {
-  try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, '')}/products?limit=50&sort=-updatedAt`, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(20000),
-    })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const payload = await response.json()
-    return payload.products || []
-  } catch (error) {
-    console.warn(`Sitemap: live products unavailable (${error.message}); writing static URLs only.`)
-    return null
-  }
-}
-
-const products = await getProducts()
-let productEntries = []
-if (products) {
-  productEntries = products.filter((product) => product.slug || product._id).map((product) => ({
-    loc: `${siteUrl}/product/${encodeURIComponent(product.slug || product._id)}`,
-    lastmod: String(product.updatedAt || today).slice(0, 10),
-    changefreq: 'weekly',
-    priority: '0.8',
-  }))
-} else {
-  try {
-    const existing = await readFile(outputFile, 'utf8')
-    productEntries = [...existing.matchAll(/<url><loc>(https:\/\/www\.babycureindia\.com\/product\/[^<]+)<\/loc><lastmod>([^<]+)<\/lastmod><changefreq>([^<]+)<\/changefreq><priority>([^<]+)<\/priority><\/url>/g)]
-      .map((match) => ({ loc: match[1], lastmod: match[2], changefreq: match[3], priority: match[4] }))
-    console.warn(`Sitemap: preserved ${productEntries.length} existing product URLs.`)
-  } catch { /* Static pages still produce a valid sitemap on a first build. */ }
-}
-const urls = [
-  ...staticPages.map(([path, changefreq, priority]) => ({ loc: `${siteUrl}${path}`, lastmod: today, changefreq, priority })),
-  ...productEntries,
-]
-
-const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(({ loc, lastmod, changefreq, priority }) => `  <url><loc>${escapeXml(loc)}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`).join('\n')}
-</urlset>
-`
-
+const products = await fetchCatalog()
+await saveCatalog(products)
+const productEntries = products.map((product) => ({
+  loc: siteUrl + '/product/' + encodeURIComponent(product.slug || product._id),
+  lastmod: product.updatedAt && !Number.isNaN(Date.parse(product.updatedAt)) ? new Date(product.updatedAt).toISOString() : undefined,
+  images: (product.images || []).map((image) => image.url).filter(Boolean).map((url) => new URL(String(url).replaceAll('\\', '/'), apiUrl.replace(/\/api\/?$/, '') + '/').href),
+}))
+const urls = [...staticPages.map(([path]) => ({ loc: siteUrl + path })), ...productEntries]
+const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' + urls.map(({loc,lastmod,images=[]}) => '  <url><loc>' + escapeXml(loc) + '</loc>' + (lastmod ? '<lastmod>' + lastmod + '</lastmod>' : '') + images.map(image => '<image:image><image:loc>' + escapeXml(image) + '</image:loc></image:image>').join('') + '</url>').join('\n') + '\n</urlset>\n'
 await writeFile(outputFile, xml, 'utf8')
-console.log(`Sitemap: wrote ${urls.length} URLs (${productEntries.length} products).`)
+console.log('Sitemap: wrote ' + urls.length + ' URLs (' + products.length + ' products).')

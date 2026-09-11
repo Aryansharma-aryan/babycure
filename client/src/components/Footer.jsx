@@ -63,6 +63,7 @@ export default function Footer() {
           </div>
         </div>
         <FooterLinks title="Shop" items={[
+          ['All BabyCure Products', '/products'],
           ['Baby Shampoo', '/category?search=Baby%20Shampoo'],
           ['Baby Body Wash', '/category?search=Baby%20Body%20Wash'],
           ['Baby Lotion', '/category?search=Baby%20Lotion'],

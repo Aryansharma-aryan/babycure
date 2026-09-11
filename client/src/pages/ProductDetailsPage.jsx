@@ -78,19 +78,7 @@ export default function ProductDetailsPage() {
         availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         itemCondition: 'https://schema.org/NewCondition',
         seller: { '@type': 'Organization', name: 'Baby Cure India' },
-        shippingDetails: {
-          '@type': 'OfferShippingDetails',
-          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
-          shippingRate: { '@type': 'MonetaryAmount', value: 60, currency: 'INR' },
-        },
-        hasMerchantReturnPolicy: {
-          '@type': 'MerchantReturnPolicy',
-          applicableCountry: 'IN',
-          returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-          merchantReturnDays: 7,
-          returnMethod: 'https://schema.org/ReturnByMail',
-          returnFees: 'https://schema.org/FreeReturn',
-        },
+
       },
     }
     if (product.ratingsQuantity > 0) {
@@ -144,7 +132,7 @@ export default function ProductDetailsPage() {
   return (
     <>
       <Seo
-        title={`${product.name} | Buy Online at Baby Cure India`}
+        title={`${product.name} | Buy Online at BabyCure India`}
         description={product.shortDescription || `Buy ${product.name} online from Baby Cure India with trusted baby care support and delivery across India.`}
         image={activeImage || undefined}
         type="product"

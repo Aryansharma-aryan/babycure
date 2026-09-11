@@ -7,7 +7,8 @@ const DEFAULT_DESCRIPTION = 'Shop gentle baby care products from Baby Cure, Kuru
 const DEFAULT_KEYWORDS = 'baby care products, baby products online India, baby care shop Kurukshetra, baby shampoo, baby body wash, baby lotion, baby massage oil, diaper rash cream, newborn baby products, natural baby care, Baby Cure India, baby products Haryana'
 
 const routeSeo = {
-  '/': ['Baby Care Products in India | Baby Cure Kurukshetra', DEFAULT_DESCRIPTION],
+  '/': ['BabyCure India | Baby Shampoo, Lotion, Oil & Baby Care Products', DEFAULT_DESCRIPTION],
+  '/products': ['All BabyCure Products | Baby Care Product Directory', 'Explore all BabyCure products by name. Find baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos.'],
   '/category': ['Shop Baby Care Products Online | Baby Cure India', 'Browse gentle baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos from Baby Cure.'],
   '/about': ['About Baby Cure | Gentle Baby Care from Kurukshetra', 'Meet Baby Cure, a Kurukshetra baby care brand creating thoughtful, gentle everyday care products for babies and families.'],
   '/why-baby-cure': ['Why Choose Baby Cure | Gentle, Parent-Trusted Baby Care', 'Discover Baby Cure’s approach to gentle baby care, thoughtful products, reliable delivery and direct customer support.'],
@@ -31,9 +32,9 @@ const setMeta = (selector, attributes) => {
 }
 
 export default function Seo({ title, description, image, type = 'website', robots, jsonLd, canonicalPath: canonicalPathOverride }) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [routeTitle, routeDescription] = routeSeo[pathname] || ['Baby Cure | Gentle Baby Care Products India', DEFAULT_DESCRIPTION]
-  const canonicalPath = canonicalPathOverride ?? (pathname === '/' ? '' : pathname.replace(/\/$/, ''))
+  const canonicalPath = canonicalPathOverride ?? (pathname === '/' ? '/' : pathname.replace(/\/$/, ''))
   const canonical = `${SITE_URL}${canonicalPath}`
   const shouldNoIndex = noIndexPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 
@@ -45,7 +46,7 @@ export default function Seo({ title, description, image, type = 'website', robot
 
     setMeta('meta[name="description"]', { name: 'description', content: finalDescription })
     setMeta('meta[name="keywords"]', { name: 'keywords', content: DEFAULT_KEYWORDS })
-    setMeta('meta[name="robots"]', { name: 'robots', content: robots || (shouldNoIndex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1') })
+    setMeta('meta[name="robots"]', { name: 'robots', content: robots || ((shouldNoIndex || (pathname === '/category' && new URLSearchParams(search).has('search'))) ? 'noindex, follow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1') })
     setMeta('meta[property="og:title"]', { property: 'og:title', content: finalTitle })
     setMeta('meta[property="og:description"]', { property: 'og:description', content: finalDescription })
     setMeta('meta[property="og:type"]', { property: 'og:type', content: type })
@@ -64,7 +65,7 @@ export default function Seo({ title, description, image, type = 'website', robot
     }
     canonicalLink.href = canonical
 
-    document.head.querySelectorAll('script[data-babycure-seo]').forEach((node) => node.remove())
+    document.head.querySelectorAll('script[data-babycure-seo], script[data-static-route-seo]').forEach((node) => node.remove())
     const schemas = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : getDefaultSchemas(pathname)
     schemas.forEach((schema) => {
       const script = document.createElement('script')
@@ -73,13 +74,23 @@ export default function Seo({ title, description, image, type = 'website', robot
       script.textContent = JSON.stringify(schema)
       document.head.appendChild(script)
     })
-  }, [description, image, jsonLd, pathname, robots, routeDescription, routeTitle, shouldNoIndex, title, type, canonical])
+  }, [description, image, jsonLd, pathname, robots, routeDescription, routeTitle, shouldNoIndex, title, type, canonical, search])
 
   return null
 }
 
 function getDefaultSchemas(pathname) {
-  if (pathname !== '/' && pathname !== '/contact') return []
+  if (pathname !== '/' && pathname !== '/contact') {
+    if (!routeSeo[pathname]) return []
+    return [{
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: routeSeo[pathname][0].split('|')[0].trim(), item: `${SITE_URL}${pathname}` },
+      ],
+    }]
+  }
   const organization = {
     '@context': 'https://schema.org',
     '@type': ['Store', 'OnlineStore'],

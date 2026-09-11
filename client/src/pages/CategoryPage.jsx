@@ -116,6 +116,7 @@ export default function CategoryPage() {
           <div><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-brand-green">BabyCure shop</p><h1 className="mt-1 text-2xl font-extrabold tracking-[-.04em] text-brand-ink">All collections</h1></div>
           <span className="rounded-full bg-brand-mist px-3 py-1.5 text-xs font-extrabold text-brand-blue">{meta.total} items</span>
         </div>
+        <p className="mb-5 max-w-3xl text-sm leading-6 text-slate-600">Shop BabyCure baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos. Browse product details, sizes and prices to find everyday baby care for your family.</p>
         <CategoryCards categories={visibleCategories} activeCategory={filters.category} updateParam={updateParam} />
       </div>
 

@@ -2,12 +2,13 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const siteUrl = 'https://www.babycureindia.com'
-const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL || 'https://babycure.onrender.com/api'
+import { siteUrl, apiUrl, readCatalog } from './seo-catalog.mjs'
 const distPath = fileURLToPath(new URL('../dist/', import.meta.url))
 const template = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8')
 
 const routes = {
+  '/': ['BabyCure India | Baby Shampoo, Lotion, Oil & Baby Care Products', 'Shop BabyCure baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos online in India.'],
+  '/products': ['All BabyCure Products | Baby Care Product Directory', 'Explore all BabyCure products by name. Find baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos.'],
   '/category': ['Shop Baby Care Products Online | Baby Cure India', 'Browse gentle baby shampoo, body wash, lotion, massage oil, diaper rash cream and baby care combos from Baby Cure.'],
   '/about': ['About Baby Cure | Gentle Baby Care from Kurukshetra', 'Meet Baby Cure, a Kurukshetra baby care brand creating thoughtful, gentle everyday care products for babies and families.'],
   '/why-baby-cure': ['Why Choose Baby Cure | Gentle, Parent-Trusted Baby Care', 'Discover Baby Cure’s approach to gentle baby care, thoughtful products, reliable delivery and direct customer support.'],
@@ -34,6 +35,7 @@ function resolveMediaUrl(value) {
 function replaceHead(html, { title, description, canonical, image, type = 'website', schema }) {
   const values = { title: escapeHtml(title), description: escapeHtml(description), canonical: escapeHtml(canonical), image: escapeHtml(image || `${siteUrl}/web-app-manifest-512x512.png`) }
   return html
+    .replace(/<script type="application\/ld\+json" data-babycure-seo="true">[\s\S]*?<\/script>/g, '')
     .replace(/<title>[^<]*<\/title>/, `<title>${values.title}</title>`)
     .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${values.description}" />`)
     .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${values.canonical}" />`)
@@ -45,7 +47,7 @@ function replaceHead(html, { title, description, canonical, image, type = 'websi
     .replace(/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${values.title}" />`)
     .replace(/<meta name="twitter:description" content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${values.description}" />`)
     .replace(/<meta name="twitter:image" content="[^"]*"\s*\/>/, `<meta name="twitter:image" content="${values.image}" />`)
-    .replace('</head>', `    <script type="application/ld+json" data-static-route-seo="true">${jsonForHtml(schema)}</script>\n  </head>`)
+    .replace('</head>', `    <script type="application/ld+json" data-babycure-seo="true">${jsonForHtml(schema)}</script>\n  </head>`)
 }
 
 async function writeRoute(path, html) {
@@ -54,18 +56,7 @@ async function writeRoute(path, html) {
   await writeFile(output, html, 'utf8')
 }
 
-async function getProducts() {
-  try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, '')}/products?limit=50&sort=-updatedAt`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30000) })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return (await response.json()).products || []
-  } catch (error) {
-    console.warn(`Static SEO: products unavailable (${error.message}); product pages were not generated.`)
-    return []
-  }
-}
-
-const products = await getProducts()
+const products = await readCatalog()
 const productLinks = products.filter((product) => product.slug || product._id).map((product) => `<li><a href="/product/${encodeURIComponent(product.slug || product._id)}">${escapeHtml(product.name)}</a></li>`).join('')
 
 for (const [path, [title, description]] of Object.entries(routes)) {
@@ -74,8 +65,8 @@ for (const [path, [title, description]] of Object.entries(routes)) {
     { '@type': 'ListItem', position: 1, name: 'Home', item: `${siteUrl}/` },
     { '@type': 'ListItem', position: 2, name: title.split('|')[0].trim(), item: canonical },
   ] }
-  let html = replaceHead(template, { title, description, canonical, schema })
-  if (path === '/category' && productLinks) html = html.replace('<div id="root"></div>', `<div id="root"><main data-static-seo-content><h1>Shop Baby Care Products</h1><p>${escapeHtml(description)}</p><ul>${productLinks}</ul></main></div>`)
+  let html = replaceHead(template, { title, description, canonical, schema: path === '/' ? JSON.parse(template.match(/<script type="application\/ld\+json" data-babycure-seo="true">([\s\S]*?)<\/script>/)[1]) : schema })
+  if (['/', '/category', '/products'].includes(path) && productLinks) html = html.replace('<div id="root"></div>', `<div id="root"><main data-static-seo-content><h1>BabyCure Baby Care Products</h1><p>${escapeHtml(description)}</p><ul>${productLinks}</ul></main></div>`)
   await writeRoute(path, html)
 }
 
@@ -96,10 +87,10 @@ for (const product of products) {
     { '@type': 'ListItem', position: 2, name: 'Baby Care Products', item: `${siteUrl}/category` },
     { '@type': 'ListItem', position: 3, name: product.name, item: canonical },
   ] }]
-  const title = `${product.name} | Buy Online at Baby Cure India`
+  const title = `${product.name} | Buy Online at BabyCure India`
   let html = replaceHead(template, { title, description, canonical, image: images[0], type: 'product', schema })
   const image = images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(product.name)}" width="600" height="600" />` : ''
-  html = html.replace('<div id="root"></div>', `<div id="root"><main data-static-seo-content><nav><a href="/">Home</a> / <a href="/category">Baby Care Products</a></nav><article>${image}<h1>${escapeHtml(product.name)}</h1><p>${escapeHtml(description)}</p><p>₹${escapeHtml(product.price)} · ${product.stock > 0 ? 'In stock' : 'Out of stock'}</p><div>${escapeHtml(plainText(product.description || product.shortDescription))}</div><p><a href="/category">View all Baby Cure products</a></p></article></main></div>`)
+  html = html.replace('<div id="root"></div>', `<div id="root"><main data-static-seo-content><nav><a href="/">Home</a> / <a href="/category">Baby Care Products</a></nav><article>${image}<h1>${escapeHtml(product.name)}</h1><p>${escapeHtml(description)}</p><p>₹${escapeHtml(product.price)} · ${product.stock > 0 ? 'In stock' : 'Out of stock'}</p><div>${escapeHtml(plainText(product.description || product.shortDescription))}</div><p><a href="/products">View all BabyCure products</a></p></article></main></div>`)
   await writeRoute(path, html)
 }
 

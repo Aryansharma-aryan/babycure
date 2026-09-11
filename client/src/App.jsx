@@ -32,6 +32,7 @@ function lazyWithReload(importer) {
 }
 
 const HomePage = lazyWithReload(() => import('./pages/HomePage'))
+const ProductDirectoryPage = lazyWithReload(() => import('./pages/ProductDirectoryPage'))
 const CategoryPage = lazyWithReload(() => import('./pages/CategoryPage'))
 const ProductDetailsPage = lazyWithReload(() => import('./pages/ProductDetailsPage'))
 const CartPage = lazyWithReload(() => import('./pages/CartPage'))
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'products', element: <ProductDirectoryPage /> },
       { path: 'category', element: <CategoryPage /> },
       { path: 'product/:id', element: <ProductDetailsPage /> },
       { path: 'cart', element: <CartPage /> },
