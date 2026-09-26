@@ -11,7 +11,10 @@ const getTransporter = () => {
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      // Google displays app passwords in groups separated by spaces.
+      pass: process.env.SMTP_HOST.trim().toLowerCase() === 'smtp.gmail.com'
+        ? process.env.SMTP_PASS.replace(/\s/g, '')
+        : process.env.SMTP_PASS,
     },
   })
 }

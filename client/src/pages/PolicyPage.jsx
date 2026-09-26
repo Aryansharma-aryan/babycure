@@ -8,6 +8,19 @@ const contact = {
 }
 
 const policies = {
+  '/terms-and-conditions': {
+    eyebrow: 'Information',
+    title: 'Terms & Conditions',
+    copy: 'Information about using your BabyCure account and shopping with us.',
+    icon: ShieldCheck,
+    sections: [
+      { title: 'Your Account', body: ['Sign in using your email and one-time verification code. Keep access to your email secure, never share your verification code, and log out when using a shared device. Provide accurate delivery and contact details when ordering.'] },
+      { title: 'Product Information', body: ['Review the product description, size, price and availability before adding an item to your bag. Follow the directions and precautions on the product packaging. Contact our team if you need help finding product information.'] },
+      { title: 'Checkout and Payment', body: ['Review your delivery address, selected products, quantities, discounts, delivery charges and final total before placing an order. Available payment options are displayed at checkout. You can view order status and invoices from My Account.'] },
+      { title: 'Shipping, Returns and Refunds', body: ['Please read our Shipping Policy and Return & Refund Policy for delivery information and the conditions that apply to return, replacement and refund requests. These pages are linked below.'] },
+      { title: 'Privacy and Support', body: ['Our Privacy Policy describes how customer information is handled. For questions about your account or an order, contact info@babycureindia.com or use our Help Centre. Include your order number when requesting order support, but never share an OTP or payment credentials.'] },
+    ],
+  },
   '/shipping-policy': {
     eyebrow: 'Shipping',
     title: 'Shipping Policy',
@@ -245,6 +258,10 @@ export default function PolicyPage() {
             <a href={`tel:${contact.phone.replaceAll('-', '')}`} className="rounded-md bg-white px-4 py-3 text-brand-green">{contact.phone}</a>
           </div>
           <Link to="/contact" className="mt-4 inline-flex rounded-md bg-brand-blue px-5 py-3 text-sm font-black text-white">Contact Support</Link>
+          <nav aria-label="Store information" className="mt-5 grid gap-3 border-t border-sky-100 pt-5 text-sm font-semibold text-brand-blue">
+            {Object.entries(policies).map(([path, item]) => <Link key={path} to={path} aria-current={pathname === path ? 'page' : undefined} className="rounded focus-visible:outline focus-visible:outline-2 hover:underline">{item.title}</Link>)}
+            <Link to="/account" className="rounded text-brand-ink hover:underline">Back to My Account</Link>
+          </nav>
           <p className="mt-5 text-sm font-black text-brand-ink">Baby Cure - Gentle by Nature, Pure by Care.</p>
         </aside>
       </div>

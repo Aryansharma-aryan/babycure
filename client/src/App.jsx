@@ -89,6 +89,7 @@ const router = createBrowserRouter([
       { path: 'return-refund-policy', element: <PolicyPage /> },
       { path: 'faqs', element: <PolicyPage /> },
       { path: 'privacy-policy', element: <PolicyPage /> },
+      { path: 'terms-and-conditions', element: <PolicyPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'orders', element: <MyOrdersPage /> },
       { path: 'orders/:id', element: <OrderDetailsPage /> },

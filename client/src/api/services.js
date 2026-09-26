@@ -1,6 +1,8 @@
 import { api, buildQuery } from './client'
 
 export const authService = {
+  sendLoginOtp: (payload) => api.post('/auth/otp/send', payload),
+  verifyLoginOtp: (payload) => api.post('/auth/otp/verify', payload),
   me: () => api.get('/auth/me'),
   login: (payload) => api.post('/auth/login', payload),
   register: (payload) => api.post('/auth/register', payload),

@@ -1,21 +1,23 @@
 const { Router } = require('express')
 
 const {
+  sendLoginOtp,
+  verifyLoginOtp,
   getMe,
-  loginUser,
   logoutUser,
-  registerUser,
   resetPasswordWithOtp,
   sendPasswordResetOtp,
   updateMe,
 } = require('../controllers/authController')
 const { protect } = require('../middlewares/authMiddleware')
-const { sendPasswordResetOtpLimiter } = require('../middlewares/otpRateLimiter')
+const { sendLoginOtpLimiter, verifyLoginOtpLimiter, sendPasswordResetOtpLimiter } = require('../middlewares/otpRateLimiter')
 
 const router = Router()
 
-router.post('/register', registerUser)
-router.post('/login', loginUser)
+router.post('/otp/send', sendLoginOtpLimiter, sendLoginOtp)
+router.post('/otp/verify', verifyLoginOtpLimiter, verifyLoginOtp)
+router.post('/register', sendLoginOtpLimiter, sendLoginOtp)
+router.post('/login', sendLoginOtpLimiter, sendLoginOtp)
 router.post('/logout', logoutUser)
 router.post('/password/forgot', sendPasswordResetOtpLimiter, sendPasswordResetOtp)
 router.post('/password/reset', resetPasswordWithOtp)

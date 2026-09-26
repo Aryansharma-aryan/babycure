@@ -46,8 +46,7 @@ function ProductCard({ product }) {
 
   const handleAdd = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login to add products to your bag')
-      navigate('/login')
+      navigate('/login', { state: { from: productPath } })
       return
     }
     setBusy(true)

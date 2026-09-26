@@ -16,7 +16,7 @@ const postalPattern = /^\d{6}$/
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading, refreshUser } = useAuth()
   const { items, totals, syncCart } = useCart()
   const [addresses, setAddresses] = useState([])
   const [selectedAddress, setSelectedAddress] = useState('')
@@ -62,6 +62,7 @@ export default function CheckoutPage() {
     try {
       const response = await addressService.create({ ...data, isDefault: true })
       const nextAddresses = await refreshAddresses()
+      await refreshUser()
       setSelectedAddress(response.address?._id || nextAddresses[0]?._id || '')
       setShowAddressForm(false)
       toast.success('Address saved')

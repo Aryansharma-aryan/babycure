@@ -1,54 +1,22 @@
-import { useEffect } from 'react'
-import toast, { Toaster } from 'react-hot-toast'
-
-const welcomeToasts = [
-  { type: 'success', text: 'Welcome to Babycure - gentle care for happy babies' },
-  { text: 'Try our Gentle Baby Wash for soft everyday cleansing' },
-  { text: 'Natural lotion, wipes and diaper care made for delicate skin' },
-  { text: 'Special baby-care bundle offers are available today' },
-  { text: 'Add your favourites to your bag and checkout smoothly' },
-]
+﻿import { useEffect } from 'react'
+import toast, { Toaster, ToastBar, useToasterStore } from 'react-hot-toast'
+import { X } from 'lucide-react'
 
 export default function ToastManager() {
+  const { toasts } = useToasterStore()
   useEffect(() => {
-    const storageKey = 'babycure-welcome-seen-v4'
-    if (localStorage.getItem(storageKey)) return
-
-    localStorage.setItem(storageKey, 'true')
-    const timers = welcomeToasts.map((message, index) =>
-      window.setTimeout(() => {
-        if (message.type === 'success') {
-          toast.success(message.text)
-          return
-        }
-        toast(message.text, { icon: index % 2 === 0 ? '🧴' : '💚' })
-      }, index * 950),
-    )
-
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [])
-
+    toasts.filter((item) => item.visible).slice(3).forEach((item) => toast.dismiss(item.id))
+  }, [toasts])
   return (
-    <Toaster
-      position="top-right"
-      toastOptions={{
-        duration: 2800,
-        style: {
-          borderRadius: '18px',
-          border: '1px solid #d8eefb',
-          color: '#17324D',
-          fontWeight: 800,
-          padding: '15px 17px',
-          boxShadow: '0 24px 70px rgba(74, 166, 217, 0.18)',
-        },
-        className: 'baby-toast',
-        success: {
-          iconTheme: {
-            primary: '#7CC576',
-            secondary: '#ffffff',
-          },
-        },
-      }}
-    />
+    <Toaster position="top-center" gutter={8} containerStyle={{ top: 20 }} toastOptions={{
+      duration: 3200,
+      style: { borderRadius: '12px', border: '1px solid #e2e8f0', color: '#17324D', fontWeight: 600, fontSize: '14px', padding: '12px 16px', maxWidth: 'min(420px, calc(100vw - 32px))', boxShadow: '0 8px 30px rgba(23,50,77,0.12)' },
+      className: 'baby-toast',
+      ariaProps: { role: 'status', 'aria-live': 'polite' },
+      success: { iconTheme: { primary: '#64af5c', secondary: '#ffffff' } },
+      error: { duration: 4500 },
+    }}>
+      {(notification) => <ToastBar toast={notification}>{({ icon, message }) => <>{icon}{message}{notification.type !== 'loading' && <button type="button" onClick={() => toast.dismiss(notification.id)} aria-label="Dismiss notification" className="ml-2 rounded p-1 text-slate-400 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2"><X className="h-4 w-4" /></button>}</>}</ToastBar>}
+    </Toaster>
   )
 }

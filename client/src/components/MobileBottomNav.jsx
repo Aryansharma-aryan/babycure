@@ -6,7 +6,7 @@ const items = [
   ['/category', Baby, 'Shop'],
   ['/cart', ShoppingBag, 'Bag'],
   ['/orders', PackageCheck, 'Orders'],
-  ['/login', CircleUserRound, 'Account'],
+  ['/account', CircleUserRound, 'Account'],
 ]
 
 export default function MobileBottomNav() {

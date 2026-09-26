@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
 const AUTH_COOKIE_NAME = 'babycure_session'
-const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+const SESSION_MAX_AGE_MS = 400 * 24 * 60 * 60 * 1000
 
 const getJwtSecret = () => {
   if (!process.env.JWT_SECRET) {

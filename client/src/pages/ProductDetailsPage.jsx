@@ -16,6 +16,7 @@ import { formatPrice } from '../utils/format'
 import { getProductImage } from '../utils/products'
 import { resolveMediaUrl } from '../api/client'
 import Seo from '../components/Seo'
+import { rememberProduct } from '../utils/recentlyViewed'
 
 export default function ProductDetailsPage() {
   const { id } = useParams()
@@ -33,15 +34,16 @@ export default function ProductDetailsPage() {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    queueMicrotask(() => { if (active) { setLoading(true); setMissing(false) } })
     Promise.all([productService.get(id), productService.reviews(id).catch(() => ({ reviews: [] }))])
       .then(([productResponse, reviewsResponse]) => {
         if (!active) return
         setProduct(productResponse.product)
+        rememberProduct(productResponse.product)
         setReviews(reviewsResponse.reviews || [])
         setActiveImage(getProductImage(productResponse.product))
       })
-      .catch(() => setMissing(true))
+      .catch(() => active && setMissing(true))
       .finally(() => active && setLoading(false))
     return () => {
       active = false

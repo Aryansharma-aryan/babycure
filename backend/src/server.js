@@ -9,6 +9,9 @@ let server
 
 const startServer = async () => {
   await connectDB()
+  // The OTP cooldown relies on its unique index, including on a fresh deployment.
+  await require('./models/Otp').init()
+  await require('./models/Session').init()
 
   server = app.listen(PORT, () => {
     console.log(`BabyCure API running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`)

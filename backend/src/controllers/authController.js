@@ -5,24 +5,27 @@ const Otp = require('../models/Otp')
 const User = require('../models/User')
 const AppError = require('../utils/AppError')
 const asyncHandler = require('../utils/asyncHandler')
-const { AUTH_COOKIE_NAME, getCookieOptions, signToken } = require('../utils/jwt')
+const { AUTH_COOKIE_NAME, getCookieOptions } = require('../utils/jwt')
+const { createSession, hashSession } = require('../utils/session')
+const Session = require('../models/Session')
+const Address = require('../models/Address')
 const { isValidPhone, normalizePhone } = require('../utils/phone')
 const { notifyUser } = require('../services/notificationService')
+const logger = require('../config/logger')
 const { getLogoAttachment, getLogoHtml, sendEmail } = require('../services/emailService')
 
-const sendAuthResponse = (user, statusCode, res, message) => {
-  const token = signToken(user._id)
-
-  res.cookie(AUTH_COOKIE_NAME, token, getCookieOptions())
+const sendAuthResponse = async (user, statusCode, res, message) => {
+  await createSession(user._id, res)
+  const address = await Address.findOne({ user: user._id }).sort({ isDefault: -1, createdAt: -1 })
 
   res.status(statusCode).json({
     success: true,
     message,
     user: {
       id: user._id,
-      name: user.name,
+      name: address?.fullName || user.name,
       email: user.email,
-      phone: user.phone,
+      phone: address?.phone || user.phone,
       role: user.role,
       isBlocked: user.isBlocked,
       isPhoneVerified: user.isPhoneVerified,
@@ -69,7 +72,7 @@ const registerUser = asyncHandler(async (req, res) => {
     message: 'Your BabyCure account has been created successfully.',
   }).catch(() => {})
 
-  sendAuthResponse(user, 201, res, 'Account created successfully.')
+  await sendAuthResponse(user, 201, res, 'Account created successfully.')
 })
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -89,10 +92,13 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new AppError('Your account has been blocked. Please contact support.', 403)
   }
 
-  sendAuthResponse(user, 200, res, 'Logged in successfully.')
+  await sendAuthResponse(user, 200, res, 'Logged in successfully.')
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME]
+  if (token?.startsWith('s_')) await Session.deleteOne({ tokenHash: hashSession(token) })
+  res.clearCookie('token', getCookieOptions())
   res.cookie(AUTH_COOKIE_NAME, '', {
     ...getCookieOptions(),
     maxAge: 0,
@@ -105,13 +111,14 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const getMe = asyncHandler(async (req, res) => {
+  const address = await Address.findOne({ user: req.user._id }).sort({ isDefault: -1, createdAt: -1 })
   res.status(200).json({
     success: true,
     user: {
       id: req.user._id,
-      name: req.user.name,
+      name: address?.fullName || req.user.name,
       email: req.user.email,
-      phone: req.user.phone,
+      phone: address?.phone || req.user.phone,
       role: req.user.role,
       isBlocked: req.user.isBlocked,
       isPhoneVerified: req.user.isPhoneVerified,
@@ -121,6 +128,9 @@ const getMe = asyncHandler(async (req, res) => {
 })
 
 const updateMe = asyncHandler(async (req, res) => {
+  if (req.body.email && normalizeEmail(req.body.email) !== req.user.email) {
+    throw new AppError('Your verified login email cannot be changed here.', 400)
+  }
   const allowed = {}
   const { name, email, phone } = req.body
 
@@ -160,7 +170,7 @@ const updateMe = asyncHandler(async (req, res) => {
     runValidators: true,
   })
 
-  sendAuthResponse(user, 200, res, 'Profile updated successfully.')
+  await sendAuthResponse(user, 200, res, 'Profile updated successfully.')
 })
 
 const sendPasswordResetOtp = asyncHandler(async (req, res) => {
@@ -190,14 +200,12 @@ const sendPasswordResetOtp = asyncHandler(async (req, res) => {
     purpose: 'password_reset',
   })
 
-  await Otp.create({
+  const otpRecord = await Otp.create({
     email: normalizedEmail,
     otpHash,
     expiresAt,
     purpose: 'password_reset',
   })
-
-  let emailSkipped = false
 
   try {
     const emailResult = await sendEmail({
@@ -220,36 +228,23 @@ const sendPasswordResetOtp = asyncHandler(async (req, res) => {
       attachments: getLogoAttachment(),
     })
 
-    emailSkipped = Boolean(emailResult?.skipped)
-
-    if (emailSkipped && process.env.NODE_ENV !== 'development') {
-      await Otp.deleteMany({
-        email: normalizedEmail,
-        purpose: 'password_reset',
-      })
-      throw new AppError('Email service is not configured. Please set SMTP credentials.', 503)
+    if (emailResult?.skipped) {
+      throw new AppError('Password reset email is currently unavailable. Please try again later.', 503)
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      emailSkipped = true
-    } else {
-      await Otp.deleteMany({
-        email: normalizedEmail,
-        purpose: 'password_reset',
-      })
+    await Otp.deleteOne({ _id: otpRecord._id })
+    logger.error({ code: error.code, command: error.command, responseCode: error.responseCode }, 'Password reset email delivery failed')
 
-      if (error instanceof AppError) {
-        throw error
-      }
-
-      throw new AppError('Unable to send password reset OTP. Please try again later.', 502)
+    if (error instanceof AppError) {
+      throw error
     }
+
+    throw new AppError('Unable to send password reset OTP. Please try again later.', 502)
   }
 
   res.status(200).json({
     success: true,
     message: 'Password reset OTP sent successfully.',
-    ...(emailSkipped ? { devOtp: otp } : {}),
   })
 })
 
@@ -309,7 +304,64 @@ const resetPasswordWithOtp = asyncHandler(async (req, res) => {
   })
 })
 
+
+const sendLoginOtp = asyncHandler(async (req, res) => {
+  if (typeof req.body.email !== 'string' || !isValidEmail(req.body.email)) {
+    throw new AppError('Please enter a valid email address.', 400)
+  }
+  const email = normalizeEmail(req.body.email)
+  const otp = generateOtp()
+  const otpHash = await bcrypt.hash(otp, 12)
+  let record
+  try {
+    record = await Otp.findOneAndUpdate(
+      { email, purpose: 'login', updatedAt: { $lte: new Date(Date.now() - 60000) } },
+      { $set: { otpHash, expiresAt: new Date(Date.now() + 300000), attempts: 0 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    )
+  } catch (error) {
+    if (error.code === 11000) throw new AppError('Please wait 60 seconds before requesting another code.', 429)
+    throw error
+  }
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: 'Your BabyCure login code',
+      text: 'Your BabyCure login code is ' + otp + '. It expires in 5 minutes. Never share this code. If you did not request it, ignore this email.',
+      html: '<div style="font-family:Arial,sans-serif;padding:24px;color:#17324D"><h2>Welcome to BabyCure</h2><p>Your one-time login code</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold">' + otp + '</p><p>Valid for 5 minutes. Never share this code.</p><p>If you did not request this, you can ignore this email.</p></div>',
+    })
+    if (result?.skipped) throw new Error('Email delivery unavailable')
+  } catch (error) {
+    await Otp.deleteOne({ _id: record._id, otpHash })
+    logger.error({ code: error.code }, 'Login OTP delivery failed')
+    throw new AppError('Unable to send your code. Please try again shortly.', 503)
+  }
+  res.json({ success: true, message: 'Verification code sent. Check your email.', retryAfter: 60 })
+})
+
+const verifyLoginOtp = asyncHandler(async (req, res) => {
+  if (typeof req.body.email !== 'string' || !isValidEmail(req.body.email) || !/^\d{6}$/.test(String(req.body.otp || ''))) {
+    throw new AppError('Enter your email and the 6-digit verification code.', 400)
+  }
+  const email = normalizeEmail(req.body.email)
+  // Reserve attempts atomically so concurrent requests cannot bypass the limit.
+  const record = await Otp.findOneAndUpdate(
+    { email, purpose: 'login', expiresAt: { $gt: new Date() }, attempts: { $lt: 5 } },
+    { $inc: { attempts: 1 } }, { new: true, timestamps: false },
+  ).select('+otpHash')
+  if (!record || !(await bcrypt.compare(String(req.body.otp), record.otpHash))) {
+    throw new AppError('Incorrect or expired code. Try again or request a new code.', 400)
+  }
+  const consumed = await Otp.deleteOne({ _id: record._id, otpHash: record.otpHash })
+  if (!consumed.deletedCount) throw new AppError('This code has already been used. Request a new code.', 400)
+  const user = await User.findOneAndUpdate({ email }, { $setOnInsert: { email } }, { upsert: true, new: true, setDefaultsOnInsert: true })
+  if (user.isBlocked) throw new AppError('Your account has been blocked. Please contact support.', 403)
+  await sendAuthResponse(user, 200, res, 'Welcome to BabyCure.')
+})
+
 module.exports = {
+  sendLoginOtp,
+  verifyLoginOtp,
   getMe,
   loginUser,
   logoutUser,

@@ -1,283 +1,95 @@
-import { ShieldCheck } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ShieldCheck, Mail, ArrowLeft, ArrowRight, Check, Heart, LoaderCircle, LockKeyhole } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { authService } from '../api/services'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Logo from '../components/Logo'
-import PageHeader from '../components/PageHeader'
-import authImage from '../assets/babycure-hero-products.png'
 import { useAuth } from '../hooks/useAuth'
-
-const phonePattern = /^[6-9]\d{9}$/
-const isAdminUser = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
+import loginArtwork from '../assets/babycure-login-family.png'
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('login')
-  const [authType, setAuthType] = useState('email')
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetOtpSent, setResetOtpSent] = useState(false)
-  const [formResetKey, setFormResetKey] = useState(0)
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [sent, setSent] = useState(false)
   const [pending, setPending] = useState(false)
+  const [retryAt, setRetryAt] = useState(0)
+  const [now, setNow] = useState(Date.now)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, login, logout, register, resetPassword, sendPasswordResetOtp, user } = useAuth()
-  const requestedPath = typeof location.state?.from === 'string' && location.state.from.startsWith('/')
-    ? location.state.from
-    : '/'
-  const postAuthPath = isAdminUser(user) ? '/admin' : requestedPath
+  const { isAuthenticated, loading, verifyLoginOtp, user } = useAuth()
+  const from = location.state?.from
+  const destination = typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') && from !== '/login' ? from : '/account'
+  const seconds = Math.max(0, Math.ceil((retryAt - now) / 1000))
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(postAuthPath, { replace: true })
-    }
-  }, [isAuthenticated, navigate, postAuthPath])
+    if (isAuthenticated) navigate(user?.role === 'admin' ? '/admin' : destination, { replace: true })
+  }, [isAuthenticated, user, destination, navigate])
 
-  const title = useMemo(() => {
-    if (isAuthenticated) return 'Your Babycure account'
-    if (authType === 'forgot') return resetOtpSent ? 'Reset your password' : 'Forgot password'
-    return mode === 'login' ? 'Sign in to continue' : 'Create your account'
-  }, [authType, isAuthenticated, mode, resetOtpSent])
+  useEffect(() => {
+    if (!retryAt) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [retryAt])
 
-  const handleEmailSubmit = async (event) => {
+  const sendCode = async () => {
+    setPending(true)
+    setError('')
+    try {
+      const response = await authService.sendLoginOtp({ email: email.trim().toLowerCase() })
+      setSent(true)
+      setOtp('')
+      setNow(Date.now())
+      setRetryAt(Date.now() + (response.retryAfter || 60) * 1000)
+      toast.success('Code sent. Please check your email.', { id: 'login-code' })
+    } catch (failure) {
+      setError(failure.message)
+      if (failure.status === 429) setRetryAt(Date.now() + 60000)
+    } finally { setPending(false) }
+  }
+
+  const submit = async (event) => {
     event.preventDefault()
-    const data = Object.fromEntries(new FormData(event.currentTarget))
-
-    if (!data.email || !String(data.email).includes('@') || !data.password) {
-      toast.error('Please enter valid email and password')
-      return
-    }
-
-    if (mode === 'register' && (!data.name || !phonePattern.test(String(data.phone || '')))) {
-      toast.error('Please enter your name and a valid 10 digit phone number')
-      return
-    }
-
+    if (!sent) return sendCode()
     setPending(true)
-    try {
-      if (mode === 'login') {
-        const response = await login({ email: data.email, password: data.password })
-        navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
-        return
-      } else {
-        const response = await register({
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          password: data.password,
-        })
-        navigate(isAdminUser(response.user) ? '/admin' : requestedPath, { replace: true })
-        return
-      }
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const handleSendPasswordOtp = async (event) => {
-    event.preventDefault()
-    await sendResetOtp()
-  }
-
-  const sendResetOtp = async () => {
-    if (!resetEmail || !resetEmail.includes('@')) {
-      toast.error('Please enter your registered email address')
-      return
-    }
-
-    setPending(true)
-    try {
-      await sendPasswordResetOtp({ email: resetEmail })
-      setResetOtpSent(true)
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const handleResetPassword = async (event) => {
-    event.preventDefault()
-    const data = Object.fromEntries(new FormData(event.currentTarget))
-
-    if (!/^\d{6}$/.test(String(data.otp || ''))) {
-      toast.error('Please enter the 6 digit OTP from your email')
-      return
-    }
-
-    if (!data.password || String(data.password).length < 8) {
-      toast.error('New password must be at least 8 characters')
-      return
-    }
-
-    if (data.password !== data.confirmPassword) {
-      toast.error('Passwords do not match')
-      return
-    }
-
-    setPending(true)
-    try {
-      await resetPassword({ email: resetEmail, otp: data.otp, password: data.password })
-      setAuthType('email')
-      setMode('login')
-      setResetEmail('')
-      setResetOtpSent(false)
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const handleLogout = async () => {
-    setPending(true)
-    try {
-      await logout()
-      setMode('login')
-      setAuthType('email')
-      setResetEmail('')
-      setResetOtpSent(false)
-      setFormResetKey((key) => key + 1)
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const switchEmailMode = (nextMode) => {
-    setMode(nextMode)
-    setFormResetKey((key) => key + 1)
+    setError('')
+    try { await verifyLoginOtp({ email: email.trim().toLowerCase(), otp }) }
+    catch (failure) { setError(failure.message) }
+    finally { setPending(false) }
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
-      <PageHeader eyebrow="Account" title="Login / Register" copy="Manage orders, addresses and saved care lists." backTo="/" backLabel="Back to store" />
-      <div className="grid overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_30px_100px_rgba(74,166,217,0.14)] lg:grid-cols-[0.98fr_1.02fr]">
-        <div className="relative min-h-[560px] overflow-hidden bg-[linear-gradient(135deg,#F5FFF3,#F3FBFF)]">
-          <img src={authImage} alt="BabyCure shampoo and skincare products with mother and baby" className="absolute inset-0 h-full w-full object-cover object-[59%_center]" loading="lazy" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(23,50,77,0.34)),linear-gradient(90deg,rgba(255,255,255,0.72),rgba(255,255,255,0.08)_55%,rgba(255,255,255,0))]" />
-          <div className="absolute left-6 top-6 rounded-full border border-white/70 bg-white/84 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-brand-green shadow-[0_18px_55px_rgba(124,197,118,0.18)] backdrop-blur">
-            Gentle by nature
+    <section className="relative mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-10">
+      <Link to="/account" className="mb-5 inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 transition hover:text-brand-blue"><ArrowLeft className="h-4 w-4" />Back to account</Link>
+      <div className="grid overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_20px_80px_-24px_rgba(23,50,77,0.22)] lg:min-h-[690px] lg:grid-cols-[0.95fr_1.05fr]">
+        <aside className="relative isolate min-h-[260px] overflow-hidden bg-[#e9ece5] sm:min-h-[320px] lg:min-h-full">
+          <img src={loginArtwork} alt="A mother cuddling her smiling baby in a softly lit nursery" width="1060" height="1484" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_56%] lg:object-center" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#f5f3ed]/95 via-[#f5f3ed]/40 to-transparent lg:bg-[linear-gradient(180deg,rgba(247,246,240,.4),transparent_48%,rgba(30,53,43,.45))]" />
+          <div className="relative p-6 sm:p-9 lg:p-10">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-[#48634c] backdrop-blur"><Heart className="h-3 w-3" />The BabyCure family</span>
+            <h1 className="mt-5 max-w-[240px] font-display text-3xl font-bold leading-[1.12] tracking-tight text-brand-ink sm:text-4xl lg:max-w-none lg:text-[42px]">Little moments.<br /><span className="text-[#5d805e]">Lifelong love.</span></h1>
+            <p className="mt-3 max-w-[190px] text-xs font-medium leading-6 text-slate-600 sm:max-w-[245px] sm:text-sm">A little everyday care, for the ones who mean everything.</p>
           </div>
-          <div className="absolute bottom-8 left-6 right-6 rounded-[1.7rem] border border-white/65 bg-white/82 p-6 shadow-[0_24px_70px_rgba(74,166,217,0.18)] backdrop-blur">
-            <h2 className="font-display text-4xl font-black leading-tight text-brand-ink">Welcome to BabyCure</h2>
-            <p className="mt-3 max-w-md font-semibold leading-7 text-slate-600">Sign in for faster checkout, order tracking, wishlist care and fresh baby-care offers.</p>
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center text-xs font-black text-brand-ink">
-              {['Shampoo', 'Skincare', 'Baby Wipes'].map((item) => (
-                <span key={item} className="rounded-full bg-gradient-to-r from-brand-leaf to-sky-50 px-3 py-2 text-brand-blue">
-                  {item}
-                </span>
-              ))}
-            </div>
+          <div className="absolute inset-x-9 bottom-8 hidden rounded-2xl border border-white/30 bg-white/15 p-5 text-white backdrop-blur-md lg:block"><p className="text-lg font-semibold">Welcome to your care corner.</p><p className="mt-1 text-sm leading-6 text-white/90">Your favourites, your orders, and a simpler way to shop for your little one.</p></div>
+        </aside>
+        <div className="flex flex-col px-6 py-7 sm:px-10 sm:py-9 lg:px-12 lg:py-10">
+          <div className="flex items-center justify-between gap-3"><Logo /><span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-green-700"><LockKeyhole className="h-3 w-3" />Secure login</span></div>
+          <div className="mt-6 flex items-center gap-3 text-xs font-semibold" aria-label={sent ? 'Step 2 of 2: verify your email' : 'Step 1 of 2: enter your email'}>
+            <span className="flex items-center gap-2 text-brand-blue"><span className="grid h-6 w-6 place-items-center rounded-full bg-sky-100">{sent ? <Check className="h-3.5 w-3.5" /> : '1'}</span>Email</span><span className="h-px w-9 bg-slate-200" /><span className={`flex items-center gap-2 ${sent ? 'text-brand-blue' : 'text-slate-400'}`}><span className={`grid h-6 w-6 place-items-center rounded-full ${sent ? 'bg-sky-100' : 'bg-slate-100'}`}>2</span>Verify</span>
           </div>
-        </div>
-
-        <div className="bg-[linear-gradient(135deg,#FFFFFF,#F7FCFF_54%,#F6FFF4)] p-7 md:p-12">
-          <div className="inline-flex rounded-3xl bg-white p-2 shadow-[0_18px_50px_rgba(74,166,217,0.10)]">
-            <Logo />
-          </div>
-
-          {isAuthenticated ? (
-            <div className="mt-8 rounded-[1.5rem] border border-green-100 bg-gradient-to-br from-green-50 via-white to-blue-50 p-6 shadow-[0_20px_65px_rgba(124,197,118,0.12)]">
-              <span className="grid h-14 w-14 place-items-center rounded-full bg-green-100 text-brand-green">
-                <ShieldCheck className="h-7 w-7" />
-              </span>
-              <h2 className="mt-5 font-display text-3xl font-black text-slate-950">{title}</h2>
-              <p className="mt-3 font-semibold text-slate-600">
-                Signed in as <span className="text-brand-blue">{user?.name || user?.phone || user?.email}</span>
-              </p>
-              <div className="mt-5 grid gap-3 text-sm font-bold text-slate-600 sm:grid-cols-2">
-                {user?.email && <p>Email: {user.email}</p>}
-                {user?.phone && <p>Phone: {user.phone}</p>}
-                <p>Role: {user?.role}</p>
-              </div>
-              <Button type="button" variant="outline" className="mt-7" onClick={handleLogout} disabled={pending}>
-                Logout
-              </Button>
-            </div>
-          ) : (
-            <>
-              {requestedPath === '/checkout' && (
-                <div className="mt-8 rounded-xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-bold text-brand-blue">
-                  Sign in once to continue directly to checkout. Your bag and delivery details are preserved.
-                </div>
-              )}
-              <h2 className="mt-6 font-display text-3xl font-black text-slate-950">{title}</h2>
-
-              {authType === 'email' ? (
-                <form key={`email-${mode}-${formResetKey}`} className="mt-7" onSubmit={handleEmailSubmit} autoComplete="off">
-                  <div className="mb-5 inline-flex rounded-full bg-white p-1.5 shadow-[inset_0_0_0_1px_rgba(74,166,217,0.12)]">
-                    {['login', 'register'].map((item) => (
-                      <button key={item} type="button" className={`rounded-full px-5 py-2 text-sm font-black capitalize transition hover:text-brand-blue ${mode === item ? 'bg-brand-leaf text-brand-green shadow-sm' : 'text-slate-500'}`} onClick={() => switchEmailMode(item)}>
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                  {mode === 'register' && <Input label="Full Name" name="name" placeholder="Full Name" autoComplete="off" />}
-                  <div className="mt-4">
-                    <Input label="Email Address" name="email" type="email" placeholder="Email Address" autoComplete="off" />
-                  </div>
-                  {mode === 'register' && (
-                    <div className="mt-4">
-                      <Input label="Phone Number" name="phone" inputMode="numeric" maxLength="10" placeholder="9876543210" autoComplete="off" />
-                    </div>
-                  )}
-                  <div className="mt-4">
-                    <Input label="Password" name="password" type="password" placeholder="Password" autoComplete="new-password" />
-                  </div>
-                  <div className="mt-4 flex items-center justify-between text-sm font-bold">
-                    <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" className="accent-brand-blue" /> Remember me</label>
-                    <button type="button" className="text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('forgot'); setResetEmail(''); setResetOtpSent(false) }}>Forgot password?</button>
-                  </div>
-                  <Button type="submit" className="mt-7 w-full" disabled={pending}>
-                    {pending ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
-                  </Button>
-                </form>
-              ) : authType === 'forgot' ? (
-                <form className="mt-7 rounded-[1.5rem] border border-sky-100 bg-white p-5 shadow-[0_18px_55px_rgba(74,166,217,0.10)]" onSubmit={resetOtpSent ? handleResetPassword : handleSendPasswordOtp}>
-                  <p className="mb-5 text-sm font-semibold leading-7 text-slate-600">
-                    We will send a 6 digit OTP to your registered email. Use it to create a new secure password.
-                  </p>
-                  <Input
-                    label="Registered Email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={resetEmail}
-                    onChange={(event) => setResetEmail(event.target.value.trim().toLowerCase())}
-                    disabled={resetOtpSent}
-                    autoComplete="email"
-                  />
-                  {resetOtpSent && (
-                    <div className="mt-4 space-y-4">
-                      <Input label="Email OTP" name="otp" inputMode="numeric" maxLength="6" placeholder="123456" autoComplete="one-time-code" />
-                      <Input label="New Password" name="password" type="password" placeholder="At least 8 characters" autoComplete="new-password" />
-                      <Input label="Confirm Password" name="confirmPassword" type="password" placeholder="Confirm new password" autoComplete="new-password" />
-                    </div>
-                  )}
-                  <Button type="submit" variant="green" className="mt-7 w-full" disabled={pending}>
-                    {pending ? 'Please wait...' : resetOtpSent ? 'Verify OTP & Reset Password' : 'Send Reset OTP'}
-                  </Button>
-                  {resetOtpSent && (
-                    <button
-                      type="button"
-                      className="mt-4 w-full rounded-full border border-sky-100 bg-sky-50 px-5 py-3 text-sm font-black text-brand-blue transition hover:border-brand-blue hover:bg-white disabled:opacity-60"
-                      onClick={sendResetOtp}
-                      disabled={pending}
-                    >
-                      {pending ? 'Sending OTP...' : 'Resend OTP'}
-                    </button>
-                  )}
-                  <button type="button" className="mt-4 text-sm font-black text-brand-blue transition hover:text-brand-green" onClick={() => { setAuthType('email'); setResetEmail(''); setResetOtpSent(false) }}>
-                    Back to login
-                  </button>
-                </form>
-              ) : null}
-            </>
-          )}
+          <h2 className="mt-6 text-[28px] font-bold leading-tight tracking-tight text-brand-ink sm:text-[32px]">{sent ? 'One step to your care corner.' : 'Login to BabyCure'}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-500">{sent ? <>Enter the 6-digit code sent to <strong className="break-all font-semibold text-brand-ink">{email.trim().toLowerCase()}</strong>.</> : 'Your favourite care, just an email away. We will send you a one-time verification code.'}</p>
+          <form className="mt-6 space-y-5" onSubmit={submit} aria-busy={pending}>
+            {sent ? <Input key="otp" label="Verification code" name="otp" value={otp} disabled={pending} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" required autoFocus className="!rounded-xl !bg-white py-4 text-center text-3xl tracking-[.45em] placeholder:text-slate-200 focus:!ring-4 focus:!ring-sky-50" /> : <Input key="email" label="Email address" name="email" type="email" disabled={pending} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required autoFocus className="!rounded-xl !bg-white py-4 focus:!ring-4 focus:!ring-sky-50" />}
+            {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm leading-6 text-red-700">{error}</p>}
+            <Button type="submit" className="w-full !rounded-xl !py-4 !text-sm hover:!translate-y-0" disabled={pending || loading || (sent && otp.length !== 6) || (!sent && seconds > 0)}>{pending ? <><LoaderCircle className="h-4 w-4 animate-spin" />{sent ? 'Verifying...' : 'Sending code...'}</> : <>{sent ? 'Verify & login' : seconds > 0 ? `Try again in ${seconds}s` : 'Get verification code'}<ArrowRight className="h-4 w-4" /></>}</Button>
+            {sent && <div className="flex flex-wrap justify-between gap-3 text-sm font-semibold"><button type="button" disabled={pending} className="rounded-md py-1 text-slate-500 hover:text-brand-blue disabled:opacity-50" onClick={() => { setSent(false); setOtp(''); setError('') }}><ArrowLeft className="mr-1 inline h-3.5 w-3.5" />Change email</button><button type="button" disabled={pending || seconds > 0} onClick={sendCode} className="rounded-md py-1 text-brand-blue disabled:text-slate-400">{seconds > 0 ? `Resend in ${seconds}s` : 'Resend code'}</button></div>}
+          </form>
+          <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-[#f6f9fb] p-3.5 text-xs leading-5 text-slate-500">{sent ? <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue" /> : <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#6a9d64]" />}<p>{sent ? 'Your code is valid for 5 minutes. Check spam or promotions if you do not see it. Only the latest code works.' : 'No password to remember. New here? We will create your account when you verify your email.'}</p></div>
+          <p className="mt-5 text-center text-xs leading-5 text-slate-400">Read our <Link to="/terms-and-conditions" className="text-slate-600 underline underline-offset-2">Terms & Conditions</Link> and <Link to="/privacy-policy" className="text-slate-600 underline underline-offset-2">Privacy Policy</Link>.</p>
+          <div className="mt-auto pt-6 text-center"><Link to="/category" className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-sky-50">Continue shopping<ArrowRight className="h-3.5 w-3.5" /></Link><p className="mt-2 text-[10px] text-slate-400">On a shared device? Remember to log out when you finish.</p></div>
         </div>
       </div>
     </section>

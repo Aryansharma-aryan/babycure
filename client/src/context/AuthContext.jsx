@@ -7,10 +7,12 @@ import { AuthContext } from './auth-context'
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [sessionError, setSessionError] = useState('')
 
   const refreshUser = useCallback(async () => {
     if (!hasSessionMarker()) {
       setUser(null)
+      setSessionError('')
       setLoading(false)
       return null
     }
@@ -18,9 +20,11 @@ export function AuthProvider({ children }) {
     try {
       const response = await authService.me()
       setUser(response.user)
+      setSessionError('')
       return response.user
-    } catch {
-      setUser(null)
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) { setUser(null); setSessionError('') }
+      else setSessionError('We could not reconnect to your account. Your login has been kept on this device.')
       return null
     } finally {
       setLoading(false)
@@ -41,9 +45,10 @@ export function AuthProvider({ children }) {
         if (active) {
           setUser(response.user)
         }
-      } catch {
+      } catch (error) {
         if (active) {
-          setUser(null)
+          if (error.status === 401 || error.status === 403) setUser(null)
+          else setSessionError('We could not reconnect to your account. Your login has been kept on this device.')
         }
       } finally {
         if (active) {
@@ -65,39 +70,38 @@ export function AuthProvider({ children }) {
       setLoading(false)
     }
 
+    const handleStorage = (event) => {
+      if (event.key === 'babycure:has-session') {
+        if (hasSessionMarker()) refreshUser()
+        else handleUnauthorized()
+      }
+    }
+    window.addEventListener('storage', handleStorage)
     window.addEventListener('babycure:unauthorized', handleUnauthorized)
-    return () => window.removeEventListener('babycure:unauthorized', handleUnauthorized)
-  }, [])
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('babycure:unauthorized', handleUnauthorized)
+    }
+  }, [refreshUser])
 
-  const register = useCallback(async (payload) => {
-    const response = await authService.register(payload)
+  const verifyLoginOtp = useCallback(async (payload) => {
+    const response = await authService.verifyLoginOtp(payload)
     setSessionMarker()
     setUser(response.user)
-    toast.success('Account created successfully')
-    return response
-  }, [])
-
-  const login = useCallback(async (payload) => {
-    const response = await authService.login(payload)
-    setSessionMarker()
-    setUser(response.user)
-    toast.success('Logged in successfully')
+    toast.success('Welcome to BabyCure', { id: 'auth' })
     return response
   }, [])
 
   const logout = useCallback(async () => {
-    try {
-      await authService.logout()
-    } finally {
-      clearSessionMarker()
-      setUser(null)
-    }
+    await authService.logout()
+    clearSessionMarker()
+    setUser(null)
     toast.success('Logged out successfully')
   }, [])
 
   const sendPasswordResetOtp = useCallback(async (payload) => {
     const response = await authService.sendPasswordResetOtp(payload)
-    toast.success('Password reset OTP sent to your registered email')
+    toast.success(response.message || 'If this email is registered, a password reset OTP has been sent.')
     return response
   }, [])
 
@@ -118,17 +122,16 @@ export function AuthProvider({ children }) {
     () => ({
       isAuthenticated: Boolean(user),
       loading,
-      login,
+      verifyLoginOtp,
       logout,
       refreshUser,
-      register,
       resetPassword,
       sendPasswordResetOtp,
       user,
       updateProfile,
     }),
-    [loading, login, logout, refreshUser, register, resetPassword, sendPasswordResetOtp, updateProfile, user],
+    [loading, verifyLoginOtp, logout, refreshUser, resetPassword, sendPasswordResetOtp, updateProfile, user],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{sessionError ? <div className="mx-auto my-16 max-w-md rounded-2xl border border-sky-100 bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-bold text-brand-ink">Let’s reconnect</h1><p role="status" className="mt-3 text-sm text-slate-500">{sessionError}</p><button type="button" className="mt-5 rounded-full bg-brand-blue px-6 py-3 font-semibold text-white disabled:opacity-50" disabled={loading} onClick={async () => { setLoading(true); await refreshUser() }}>{loading ? 'Reconnecting...' : 'Try again'}</button></div> : children}</AuthContext.Provider>
 }

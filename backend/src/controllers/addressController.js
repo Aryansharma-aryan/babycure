@@ -61,14 +61,14 @@ const createAddress = asyncHandler(async (req, res) => {
   const payload = buildAddressPayload(req.body)
   validateAddressPayload(payload)
 
-  if (payload.isDefault) {
-    await Address.updateMany({ user: req.user._id }, { isDefault: false })
-  }
+  payload.isDefault = payload.isDefault === true || !(await Address.exists({ user: req.user._id }))
 
   const address = await Address.create({
     ...payload,
     user: req.user._id,
   })
+
+  if (address.isDefault) await Address.updateMany({ user: req.user._id, _id: { $ne: address._id } }, { isDefault: false })
 
   res.status(201).json({
     success: true,
@@ -104,10 +104,6 @@ const updateAddress = asyncHandler(async (req, res) => {
   const payload = buildAddressPayload(req.body)
   validateAddressPayload(payload, true)
 
-  if (payload.isDefault) {
-    await Address.updateMany({ user: req.user._id }, { isDefault: false })
-  }
-
   const address = await Address.findOneAndUpdate(
     { _id: req.params.id, user: req.user._id },
     payload,
@@ -117,6 +113,8 @@ const updateAddress = asyncHandler(async (req, res) => {
   if (!address) {
     throw new AppError('Address not found.', 404)
   }
+
+  if (address.isDefault) await Address.updateMany({ user: req.user._id, _id: { $ne: address._id } }, { isDefault: false })
 
   res.status(200).json({
     success: true,
@@ -132,6 +130,10 @@ const deleteAddress = asyncHandler(async (req, res) => {
     throw new AppError('Address not found.', 404)
   }
 
+  if (address.isDefault) {
+    await Address.findOneAndUpdate({ user: req.user._id }, { isDefault: true }, { sort: { createdAt: -1 } })
+  }
+
   res.status(200).json({
     success: true,
     message: 'Address deleted successfully.',
@@ -145,9 +147,9 @@ const setDefaultAddress = asyncHandler(async (req, res) => {
     throw new AppError('Address not found.', 404)
   }
 
-  await Address.updateMany({ user: req.user._id }, { isDefault: false })
   address.isDefault = true
   await address.save()
+  await Address.updateMany({ user: req.user._id, _id: { $ne: address._id } }, { isDefault: false })
 
   res.status(200).json({
     success: true,

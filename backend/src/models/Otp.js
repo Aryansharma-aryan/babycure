@@ -27,7 +27,7 @@ const otpSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['password_reset'],
+      enum: ['password_reset', 'login'],
       default: 'password_reset',
     },
   },
@@ -35,6 +35,8 @@ const otpSchema = new mongoose.Schema(
     timestamps: true,
   },
 )
+
+otpSchema.index({ email: 1, purpose: 1 }, { unique: true, partialFilterExpression: { purpose: 'login' } })
 
 const Otp = mongoose.model('Otp', otpSchema)
 

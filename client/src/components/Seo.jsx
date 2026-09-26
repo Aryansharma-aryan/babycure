@@ -17,6 +17,7 @@ const routeSeo = {
   '/faqs': ['Baby Care Shopping FAQs | Baby Cure India', 'Find answers about Baby Cure products, ordering, payment, delivery, returns and customer support.'],
   '/shipping-policy': ['Shipping Policy | Baby Cure India', 'Read Baby Cure shipping, delivery charge and order dispatch information for customers across India.'],
   '/return-refund-policy': ['Return & Refund Policy | Baby Cure India', 'Read Baby Cure return, replacement and refund terms for online baby care purchases.'],
+  '/terms-and-conditions': ['Terms & Conditions | BabyCure India', 'Information about your BabyCure account, shopping, checkout and store policies.'],
   '/privacy-policy': ['Privacy Policy | Baby Cure India', 'Learn how Baby Cure collects, uses and protects customer information.'],
 }
 
