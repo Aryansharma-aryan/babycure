@@ -45,10 +45,6 @@ function ProductCard({ product }) {
   }
 
   const handleAdd = async () => {
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: productPath } })
-      return
-    }
     setBusy(true)
     try {
       await addToCart(await resolveProduct())

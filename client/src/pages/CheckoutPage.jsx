@@ -17,7 +17,7 @@ const postalPattern = /^\d{6}$/
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { isAuthenticated, loading: authLoading, refreshUser } = useAuth()
-  const { items, totals, syncCart } = useCart()
+  const { items, totals, syncCart, loading: cartLoading, error: cartError } = useCart()
   const [addresses, setAddresses] = useState([])
   const [selectedAddress, setSelectedAddress] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('ONLINE')
@@ -134,6 +134,7 @@ export default function CheckoutPage() {
   }
 
   const handlePlaceOrder = async () => {
+    if (cartLoading || cartError) return toast.error('Please return to your bag and wait for it to finish loading.')
     if (items.length === 0) return toast.error('Your bag is empty')
     if (!selectedAddress) return toast.error('Please select or add an address')
     setPending(true)
@@ -210,7 +211,7 @@ export default function CheckoutPage() {
               <Button className="self-end" variant="outline" onClick={applyCoupon}>Apply</Button>
             </div>
             {coupon && <p className="mt-3 text-sm font-black text-brand-green">Coupon saved {formatPrice(coupon.discountAmount)}. Payable {formatPrice(payable)}.</p>}
-            <Button type="button" variant="green" className="mt-7 w-full" onClick={handlePlaceOrder} disabled={pending}>
+            <Button type="button" variant="green" className="mt-7 w-full" onClick={handlePlaceOrder} disabled={pending || authLoading || !isAuthenticated || cartLoading || Boolean(cartError)}>
               <LockKeyhole className="h-5 w-5" /> {pending ? 'Placing order...' : `${paymentMethod === 'COD' ? 'Place COD Order' : 'Pay & Place Order'} ${formatPrice(payable)}`}
             </Button>
           </div>

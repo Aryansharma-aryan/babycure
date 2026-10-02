@@ -102,11 +102,6 @@ export default function ProductDetailsPage() {
   }, [product])
 
   const handleAdd = async () => {
-    if (!isAuthenticated) {
-      toast.error('Please login to add products to your bag')
-      navigate('/login')
-      return
-    }
     try {
       await addToCart(product, quantity)
     } catch (error) {
@@ -115,14 +110,9 @@ export default function ProductDetailsPage() {
   }
 
   const handleBuyNow = async () => {
-    if (!isAuthenticated) {
-      toast.error('Please login to checkout')
-      navigate('/login')
-      return
-    }
     try {
       await addToCart(product, quantity)
-      navigate('/checkout')
+      navigate(isAuthenticated ? '/checkout' : '/login', { state: { from: '/cart' } })
     } catch (error) {
       toast.error(error.message)
     }

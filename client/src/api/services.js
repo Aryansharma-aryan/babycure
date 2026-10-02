@@ -33,6 +33,7 @@ export const productService = {
 }
 
 export const cartService = {
+  merge: (payload) => api.post('/cart/merge', payload),
   get: () => api.get('/cart'),
   add: (payload) => api.post('/cart/add', payload),
   update: (productId, payload) => api.put(`/cart/update/${productId}`, payload),

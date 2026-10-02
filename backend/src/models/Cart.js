@@ -46,6 +46,7 @@ const cartSchema = new mongoose.Schema(
       type: [cartItemSchema],
       default: [],
     },
+    guestMergeIds: { type: [String], default: [] },
     cartTotal: {
       type: Number,
       default: 0,

@@ -12,7 +12,7 @@ function SummaryLine({ label, value, positive = false, strong = false }) {
   )
 }
 
-export default function OrderSummary({ cta, to }) {
+export default function OrderSummary({ cta, to, state }) {
   const { totals, items } = useCart()
 
   return (
@@ -25,7 +25,7 @@ export default function OrderSummary({ cta, to }) {
         <SummaryLine label="Total" value={formatPrice(totals.total)} strong />
       </div>
       {cta && (
-        <Button to={to} className="mt-5 w-full">
+        <Button to={to} state={state} className="mt-5 w-full">
           {cta}
         </Button>
       )}

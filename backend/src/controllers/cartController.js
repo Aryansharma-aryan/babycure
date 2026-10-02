@@ -14,7 +14,12 @@ const getOrCreateCart = async (userId) => {
   let cart = await Cart.findOne({ user: userId })
 
   if (!cart) {
-    cart = await Cart.create({ user: userId, items: [] })
+    try {
+      cart = await Cart.create({ user: userId, items: [] })
+    } catch (error) {
+      if (error.code !== 11000) throw error
+      cart = await Cart.findOne({ user: userId })
+    }
   }
 
   return cart
@@ -185,7 +190,44 @@ const clearCart = asyncHandler(async (req, res) => {
   await sendCart(res, cart, 'Cart cleared successfully.')
 })
 
+const mergeGuestCart = asyncHandler(async (req, res) => {
+  const { mergeId, items } = req.body
+  if (typeof mergeId !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(mergeId)
+    || !Array.isArray(items) || items.length > 100
+    || items.some((item) => !item || !mongoose.isValidObjectId(item.productId)
+      || !Number.isSafeInteger(item.quantity) || item.quantity < 1)
+    || new Set(items.map((item) => item.productId)).size !== items.length) {
+    throw new AppError('Valid guest bag is required.', 400)
+  }
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const cart = await getOrCreateCart(req.user._id)
+    if (cart.guestMergeIds.includes(mergeId)) return sendCart(res, cart)
+    const products = await Product.find({ _id: { $in: items.map((item) => item.productId) }, isActive: true })
+    let adjusted = false
+    for (const item of items) {
+      const product = products.find((entry) => entry._id.toString() === item.productId)
+      if (!product || product.stock < 1) { adjusted = true; continue }
+      const existing = cart.items.find((entry) => entry.product.toString() === item.productId)
+      const requested = (existing?.quantity || 0) + item.quantity
+      const quantity = Math.min(requested, product.stock)
+      if (quantity !== requested) adjusted = true
+      const line = { product: product._id, quantity, priceAtTime: product.price, productName: product.name, productImage: getProductImage(product) }
+      if (existing) Object.assign(existing, line)
+      else cart.items.push(line)
+    }
+    // Store the merge receipt with the items atomically, so retries cannot add twice.
+    const saved = await Cart.findOneAndUpdate(
+      { _id: cart._id, __v: cart.__v, guestMergeIds: { $ne: mergeId } },
+      { $set: { items: cart.items, cartTotal: cart.recalculateTotal() }, $push: { guestMergeIds: mergeId }, $inc: { __v: 1 } },
+      { new: true, runValidators: true },
+    )
+    if (saved) return sendCart(res, saved, adjusted ? 'Bag saved. Some items were adjusted to available stock.' : 'Guest bag saved to your account.')
+  }
+  throw new AppError('Your bag changed. Please try again.', 409)
+})
+
 module.exports = {
+  mergeGuestCart,
   addToCart,
   clearCart,
   getCart,
