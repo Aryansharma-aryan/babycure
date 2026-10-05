@@ -86,7 +86,7 @@ function HeroWithPastedProducts() {
 }
 
 function TrustBar() {
-  const points = [[ShieldCheck, 'Gentle everyday care', 'For delicate little ones'], [Leaf, 'Thoughtfully selected', 'Comfort-first essentials'], [Truck, `Free delivery above \u20B9799`, '\u20B960 delivery below \u20B9799'], [Heart, 'Care support', 'Here when you need us']]
+  const points = [[ShieldCheck, 'Gentle everyday care', 'For delicate little ones'], [Leaf, 'Thoughtfully selected', 'Comfort-first essentials'], [Truck, `Free delivery on \u20B9499 and above`, '\u20B930 delivery below \u20B9499'], [Heart, 'Care support', 'Here when you need us']]
   return <section className="border-b border-slate-100 bg-white"><div className="mx-auto grid max-w-7xl divide-y divide-slate-100 px-5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-6">{points.map(([Icon, title, text]) => <div key={title} className="flex items-center gap-3 py-5 sm:px-5 lg:px-6"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-mist text-brand-blue"><Icon className="h-5 w-5" /></span><div><h3 className="text-sm font-extrabold text-brand-ink">{title}</h3><p className="mt-0.5 text-xs font-medium text-slate-500">{text}</p></div></div>)}</div></section>
 }
 

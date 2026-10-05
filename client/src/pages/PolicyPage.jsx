@@ -52,7 +52,7 @@ const policies = {
         title: 'Shipping Charges',
         list: [
           'Shipping charges, if applicable, will be displayed during checkout.',
-          'Delivery is free on orders above ₹799. A ₹60 delivery charge applies to orders below ₹799.',
+          'Delivery is free on orders of ₹499 and above. A ₹30 delivery charge applies to orders below ₹499.',
         ],
       },
       {

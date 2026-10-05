@@ -108,7 +108,7 @@ export default function CategoryPage() {
   return (
     <section className="bg-white pb-10">
       <div className="overflow-hidden rounded-b-[1.2rem] bg-gradient-to-r from-brand-green via-brand-blue to-brand-green px-4 py-3 text-center text-xs font-extrabold text-white shadow-[0_18px_50px_rgba(74,166,217,0.18)] sm:text-sm">
-        <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Gentle everyday care, with free delivery above {'\u20B9'}799 and {'\u20B9'}60 delivery below.</span>
+        <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Gentle everyday care, with free delivery on {'\u20B9'}499 and above and {'\u20B9'}30 delivery below.</span>
       </div>
 
       <div className="mx-auto max-w-[1320px] px-4 pt-5">

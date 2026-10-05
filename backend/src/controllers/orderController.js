@@ -54,7 +54,7 @@ const generateOrderNumber = () => {
   return `BC-${timestamp}-${random}`
 }
 
-const getShippingPrice = (itemsPrice) => (itemsPrice > 799 ? 0 : 60)
+const getShippingPrice = (itemsPrice) => (itemsPrice >= 499 ? 0 : 30)
 
 const populateOrder = (query) =>
   query
