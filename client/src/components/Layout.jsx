@@ -4,11 +4,13 @@ import Footer from './Footer'
 import Header from './Header'
 import MobileBottomNav from './MobileBottomNav'
 import Seo from './Seo'
+import MetaPixelTracker from './MetaPixelTracker'
 
 export default function Layout() {
   const { pathname } = useLocation()
   return (
     <>
+      <MetaPixelTracker />
       <ScrollToTop />
       {!pathname.startsWith('/product/') && <Seo />}
       <Header />
